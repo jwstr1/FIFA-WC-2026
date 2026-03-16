@@ -488,7 +488,7 @@ function pvBuildLeft(team,path){
   h+=pvGroupSection(team,g);
   if(exit==='group'){
     const exitBehind=grpSorted(g).slice(0,pos).filter(t=>t!==team);
-    h+=`<div class="exit-banner" style="background:${c.bg}20;color:${c.bg};border-color:${c.bg}50"><span>★</span><span>Likely group exit — behind ${exitBehind.join(' & ')} · Real bracket below</span></div>`;
+    h+=`<div class="exit-banner" style="background:${c.bg}25;color:${c.tx};border-color:${c.bg}60"><span>★</span><span>Likely group exit — behind ${exitBehind.join(' & ')} · Real bracket below</span></div>`;
     const r32mBase=findR32MatchNum(grp1(g));
     if(r32mBase){const ch=getActualChain(r32mBase);h+=pvSec('Round of 32 · actual',pvNeutralCard(simR32T(r32mBase)[0],simR32T(r32mBase)[1],`M${r32mBase}`,VEN[r32mBase]||{}));h+=pvSec('Round of 16 · actual',pvNeutralCard(ch.r16actual[0],ch.r16actual[1],`M${ch.r16m}`,ch.r16v));h+=pvSec('Quarterfinal · actual',pvNeutralCard(ch.qfactual[0],ch.qfactual[1],`M${ch.qfm}`,ch.qfv));h+=pvSec('Semifinal · actual',pvNeutralCard(ch.sfactual[0],ch.sfactual[1],`M${ch.sfm}`,ch.sfv));}
     return h;
@@ -500,7 +500,7 @@ function pvBuildLeft(team,path){
     h+=`<div class="stage-sec"><div class="stage-lbl">${pvSLBLS[s.stage]||s.stage}</div>`;
     h+=pvCard(team,s.opp,`M${s.matchNum}`,s.venue,false,false);
     if(isExit){
-      h+=`<div class="exit-banner" style="background:${c.bg}20;color:${c.bg};border-color:${c.bg}50"><span>★</span><span>Likely exit: ${team} face higher-ranked ${s.opp} (#${rnk(s.opp)}) · Real bracket continues below</span></div></div>`;
+      h+=`<div class="exit-banner" style="background:${c.bg}25;color:${c.tx};border-color:${c.bg}60"><span>★</span><span>Likely exit: ${team} face higher-ranked ${s.opp} (#${rnk(s.opp)}) · Real bracket continues below</span></div></div>`;
       const r32mBase=findR32MatchNum(grp1(g))||findR32MatchNum(grp2(g));
       const ch=getActualChain(r32mBase);
       for(const rs of stageKeys.slice(stageKeys.indexOf(s.stage)+1)){
@@ -536,13 +536,19 @@ function pvBuildRight(rightTeam){
   return h;
 }
 
-function pvTeamPill(team,sub){
+function pvTeamPill(team,sub,isPredWinner){
   const c=tc(team);const od=odStr(team);
-  return`<div class="finalist-block"><div class="finalist-pill" style="background:${c.bg}"><span style="font-size:14px;font-weight:600;color:${c.tx}">${team}</span>${od?`<span style="font-size:9px;margin-left:6px;padding:1px 5px;border-radius:3px;background:rgba(0,0,0,0.5);color:#FFD700;font-weight:700">${od}</span>`:''}</div>${sub?`<div class="finalist-sub">${sub}</div>`:''}</div>`;
+  const winnerBadge=isPredWinner?`<div style="font-size:10px;color:${c.tx};margin-top:4px;opacity:.85;font-weight:600">★ Predicted winner</div>`:'';
+  const border=isPredWinner?`border:2px solid ${c.tx}40;`:'';
+  return`<div class="finalist-block"><div class="finalist-pill" style="background:${c.bg};${border}"><span style="font-size:14px;font-weight:600;color:${c.tx}">${team}</span>${od?`<span style="font-size:9px;margin-left:6px;padding:1px 5px;border-radius:3px;background:rgba(0,0,0,0.5);color:#FFD700;font-weight:700">${od}</span>`:''}</div>${winnerBadge}${sub?`<div class="finalist-sub">${sub}</div>`:''}</div>`;
 }
 
 function pvFwPanel(title,dateVenue,tA,tB,subA,subB,bgOverride,note){
-  const c=tc(tA);return`<div class="fw-card" style="background:${bgOverride||c.bg+'10'};border-color:${c.bg}40"><div style="font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">${title}</div><div class="two-team-row">${pvTeamPill(tA,subA)}<div class="vs-txt">vs</div>${pvTeamPill(tB,subB)}</div><div style="font-size:11px;color:var(--text2);margin-top:10px">${dateVenue}</div>${note?`<p style="font-size:10px;color:var(--text2);margin-top:6px">${note}</p>`:''}</div>`;
+  const c=tc(tA);
+  // Predicted winner is the team favoured by odds (if loaded) or FIFA rank
+  const predWinner=winOf([tA,tB]);
+  const wA=predWinner===tA,wB=predWinner===tB;
+  return`<div class="fw-card" style="background:${bgOverride||c.bg+'10'};border-color:${c.bg}40"><div style="font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">${title}</div><div class="two-team-row">${pvTeamPill(tA,subA,wA)}<div class="vs-txt">vs</div>${pvTeamPill(tB,subB,wB)}</div><div style="font-size:11px;color:var(--text2);margin-top:10px">${dateVenue}</div>${note?`<p style="font-size:10px;color:var(--text2);margin-top:6px">${note}</p>`:''}</div>`;
 }
 
 function pvDoRender(team){
