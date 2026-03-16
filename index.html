@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Men's FIFA World Cup 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;--surface3:#252532;--border:#2a2a3a;--border2:#3a3a50;--text:#f0f0f8;--text2:#9090aa;--accent:#4fa3ff;--gold:#ffd700;--green:#00c878;--red:#ff4466;--orange:#ff8c00;--r:8px;--rl:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding:16px}
+
+/* ── App header ── */
+.app-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.hdr-icon{font-size:32px;line-height:1}
+.hdr-text h1{font-family:'Bebas Neue',sans-serif;font-size:26px;font-weight:400;color:#FFFFFF;letter-spacing:.03em}
+.hdr-text p{font-size:11px;color:var(--text2);margin-top:2px}
+.app-header h1{font-size:19px;font-weight:600;margin-bottom:2px}
+.app-header p{font-size:11px;color:var(--text2)}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;background:var(--surface2);color:var(--text2);border:1px solid var(--border);white-space:nowrap;align-self:flex-start;margin-top:3px}
+.badge.live{background:#001a0a;color:var(--green);border-color:#00c87840}
+.badge.odds{background:#0a1020;color:var(--accent);border-color:#4fa3ff40}
+
+/* ── Top-level mode switcher ── */
+.mode-bar{display:flex;gap:6px;margin-bottom:14px;background:var(--surface);padding:5px;border-radius:var(--rl);width:fit-content}
+.mode-btn{padding:8px 20px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--text2);transition:all .15s}
+.mode-btn.active{background:var(--surface3);color:var(--text)}
+.mode-btn:hover:not(.active){color:var(--text)}
+.mode-pane{display:none}.mode-pane.active{display:block}
+
+/* ── Seed/settings bar (shared) ── */
+.seed-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;margin-bottom:14px}
+.seed-bar-title{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:10px}
+.seed-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.seed-btn{padding:7px 14px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:6px}
+.seed-btn:hover{border-color:var(--border2);color:var(--text)}
+.seed-btn.active{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+.seed-btn.disabled{opacity:0.5;pointer-events:none}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.blue{background:var(--accent)}.dot.orange{background:var(--orange)}
+.api-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.api-row input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;font-size:11px;color:var(--text);flex:1;min-width:220px;max-width:420px;font-family:monospace}
+.api-row input:focus{outline:none;border-color:var(--accent)}
+.api-row input::placeholder{color:var(--text2);font-family:inherit;font-style:italic}
+.api-link{font-size:10px;color:var(--accent);text-decoration:none;white-space:nowrap}
+.api-link:hover{text-decoration:underline}
+.relay-info{font-size:10px;color:var(--text2);padding:5px 8px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);margin-bottom:6px;line-height:1.5}
+.relay-info code{background:var(--surface3);padding:1px 5px;border-radius:3px;font-size:10px}
+.relay-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.btn{padding:5px 12px;border-radius:var(--r);font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .15s}
+.btn:hover{border-color:var(--border2);color:var(--text)}
+.btn.warn{border-color:#ff446640;color:var(--red)}
+.status-box{margin-top:10px;padding:8px 12px;border-radius:var(--r);font-size:11px;display:none;line-height:1.6;white-space:pre-wrap}
+.status-box.ok{display:block;background:#001a0a;color:var(--green);border:1px solid #00c87830}
+.status-box.err{display:block;background:#1a0008;color:#ff8899;border:1px solid #ff446630}
+.status-box.info{display:block;background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.debug-toggle{font-size:10px;color:var(--text2);cursor:pointer;text-decoration:underline;margin-top:7px;display:inline-block;opacity:.7}
+.debug-panel{display:none;margin-top:7px;background:#0d0d14;border:1px solid var(--border);border-radius:var(--r);padding:8px;font-size:10px;font-family:monospace;color:#7a7a8a;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.debug-panel.open{display:block}
+
+/* ── Inner tabs (bracket editor) ── */
+.tabs{display:flex;gap:4px;margin-bottom:14px;background:var(--surface);padding:4px;border-radius:var(--rl);width:fit-content;flex-wrap:wrap}
+.tab{padding:6px 13px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);border:none;background:none;transition:all .15s}
+.tab.active{background:var(--surface3);color:var(--text)}
+.tab:hover:not(.active){color:var(--text)}
+.pane{display:none}.pane.active{display:block}
+
+/* ── Team Journey ── */
+.pv-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.pv-sw{position:relative;flex:1;min-width:160px;max-width:280px}
+.pv-sw input{width:100%;padding:7px 11px;font-size:13px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--surface);color:var(--text)}
+.pv-sw input:focus{outline:none;border-color:var(--accent)}
+.dd{position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);z-index:200;max-height:200px;overflow-y:auto;margin-top:2px}
+.di{padding:7px 11px;font-size:12px;cursor:pointer;color:var(--text);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.di:last-child{border-bottom:none}
+.di:hover{background:var(--surface3)}
+.pv-qs{font-size:11px;color:var(--text2);margin-bottom:1rem;display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.pv-qs span{cursor:pointer;color:var(--accent);text-decoration:underline}
+.tbtn{padding:5px 12px;font-size:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
+.tbtn.on{background:var(--surface3);color:var(--text);font-weight:500;border-color:var(--border2)}
+.no-sel{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:13px;border:1px dashed var(--border2);border-radius:var(--rl)}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:620px){.dual{grid-template-columns:1fr}}
+.col-hdr{display:flex;align-items:center;gap:7px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid transparent;flex-wrap:wrap}
+.cswatch{width:12px;height:12px;border-radius:3px;flex-shrink:0;display:inline-block}
+.col-hdr .cn{font-size:13px;font-weight:500;color:var(--text)}
+.col-hdr .cs{font-size:11px;color:var(--text2)}
+.best-badge{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:500}
+.stage-sec{margin-bottom:8px}
+.stage-lbl{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.pv-mc{border-radius:10px;padding:8px 11px;margin-bottom:5px;background:var(--surface);border:0.5px solid var(--border)}
+.pv-mc-meta{display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px;opacity:0.7;padding:0 2px}
+.tstrip{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;margin:2px 0}
+.tstrip-name{font-size:12px;flex:1;font-weight:500}
+.tstrip-rk{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700}
+.pv-mv{font-size:10px;margin-top:5px;opacity:.55;padding:0 2px}
+.exit-banner{font-size:11px;padding:6px 10px;border-radius:8px;margin:2px 0 6px;display:flex;align-items:flex-start;gap:6px;border-width:0.5px;border-style:dashed;line-height:1.4}
+.summary-bar{padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:10px;border:0.5px solid transparent;line-height:1.5}
+.dream-note{font-size:9px;opacity:0.6;margin-left:3px;font-style:italic}
+.divider{display:flex;align-items:center;margin:1rem 0;gap:8px}
+.divider-line{flex:1;height:0.5px;background:var(--border)}
+.divider-txt{font-size:11px;color:var(--text2);white-space:nowrap}
+.fw-card{border-radius:12px;padding:14px;text-align:center;border:0.5px solid var(--border);margin-bottom:0}
+.two-team-row{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.finalist-block{text-align:center}
+.finalist-pill{display:inline-block;padding:7px 20px;border-radius:8px;min-width:120px}
+.finalist-sub{font-size:10px;color:var(--text2);margin-top:4px}
+.vs-txt{font-size:20px;color:var(--text2)}
+
+/* ── Bracket editor ── */
+.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(192px,1fr));gap:10px}
+.group-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.group-title{font-size:11px;font-weight:700;letter-spacing:.07em;padding:7px 12px;background:var(--surface2);color:var(--text2);text-transform:uppercase;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.group-teams{padding:6px}
+.team-row{display:flex;align-items:center;gap:5px;padding:5px 6px;border-radius:6px;margin:2px 0;user-select:none}
+.pos-lbl{font-size:9px;font-weight:700;min-width:22px;opacity:.8}
+.tn{font-size:11px;font-weight:500;flex:1}.tr{font-size:9px;opacity:.85;font-weight:700}
+.ob{font-size:9px;padding:2px 6px;border-radius:4px;white-space:nowrap;font-weight:700}
+.move-btns{display:flex;gap:2px;opacity:0;transition:opacity .1s}
+.team-row:hover .move-btns{opacity:1}
+.mbtn{background:rgba(255,255,255,.1);border:none;color:inherit;border-radius:3px;width:14px;height:14px;font-size:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mbtn:hover{background:rgba(255,255,255,.25)}
+.qual-line{border-top:1px dashed var(--border2);margin:4px 6px 2px}
+.qual-lbl{font-size:9px;color:var(--text2);text-align:center;padding:2px 0;opacity:.5}
+.ko-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:8px}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.mc-meta{font-size:9px;color:var(--text2);padding:3px 8px 2px;background:var(--surface2);display:flex;justify-content:space-between}
+.bt{display:flex;align-items:center;gap:5px;padding:5px 7px;transition:filter .1s}
+.bt.sel{cursor:pointer}.bt.sel:hover{filter:brightness(1.18)}
+.bt.win{filter:brightness(1.06)}.bt.lose{opacity:.32}
+.bt-ico{font-size:10px;width:13px;text-align:center;flex-shrink:0}
+.bt-nm{font-size:11px;font-weight:500;flex:1}
+.bt-rk{font-size:9px;opacity:.85;font-weight:700}
+.bt-od{font-size:9px;padding:2px 5px;border-radius:3px;font-weight:700;margin-left:2px}
+.mc-ven{font-size:9px;color:#555;padding:2px 8px 4px}
+.tbd-row{display:flex;align-items:center;gap:5px;padding:5px 7px}
+.tbd-lbl{font-size:10px;color:#555;font-style:italic}
+.fg{display:grid;grid-template-columns:1fr 50px 1fr;gap:10px;align-items:center;max-width:500px}
+.fp{text-align:center;cursor:pointer;padding:10px 14px;border-radius:10px;border:1px solid var(--border2);transition:all .15s;min-width:100px}
+.fp:hover{filter:brightness(1.12)}.fp.fw{border-width:2px}.fp.fl{opacity:.25}
+.fp-nm{font-size:13px;font-weight:600}.fp-rk{font-size:9px;opacity:.65;margin-top:2px}.fp-od{font-size:9px;color:#ffaa44;margin-top:2px}
+.vs-c{text-align:center;color:var(--text2);font-size:13px}
+.wbox{margin-top:16px;padding:14px;border-radius:12px;text-align:center}
+.slbl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);margin-bottom:8px}
+.vsep{margin:18px 0 14px;border-top:1px solid var(--border)}.vn{font-size:10px;color:var(--text2);margin-top:7px}
+.rgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:14px}
+.rgc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px}
+.rgt{font-size:10px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.rgi{display:flex;align-items:center;gap:5px;font-size:11px;padding:2px 0}
+.sw{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.kog{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;margin-bottom:8px}
+.koi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;display:flex;align-items:center;gap:7px}
+.kor{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);min-width:40px}
+.kot{flex:1;font-size:11px}.kowinner{font-weight:600}
+.odds-note{font-size:10px;color:var(--text2);margin-bottom:10px;padding:6px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)}
+.hlbl{font-size:11px;color:var(--text2);margin-bottom:8px}
+.spinner{display:inline-block;width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-left:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ══ APP HEADER ══ -->
+<div class="app-header">
+  <div class="hdr-icon">⚽</div>
+  <div class="hdr-text">
+    <h1>Men's FIFA World Cup 2026</h1>
+    <p>Team Journey &amp; Interactive Predictor · seed by FIFA ranking or live betting odds</p>
+  </div>
+  <span class="badge live" id="progressBadge">Group stage</span>
+  <span class="badge odds" id="oddsSourceBadge" style="display:none">Live odds</span>
+</div>
+
+<!-- ══ SHARED SEED BAR ══ -->
+<div class="seed-bar">
+  <div class="seed-bar-title">Seeding &amp; data source</div>
+  <div class="seed-row">
+    <button class="seed-btn active" id="btnFifa" onclick="seedFIFA()"><span class="dot blue"></span>FIFA world ranking</button>
+    <button class="seed-btn" id="btnOdds" onclick="seedOdds()"><span class="dot orange"></span>Live betting odds<span id="sp" style="display:none" class="spinner"></span></button>
+    <button class="btn" onclick="resetPicks()">↺ Reset bracket picks</button>
+    <button class="btn warn" onclick="seedFIFA()">↺ Full reset</button>
+  </div>
+  <div class="api-row">
+    <input type="text" id="apiKey" placeholder="Paste your The Odds API key here (free at the-odds-api.com)" spellcheck="false"/>
+    <a class="api-link" href="https://the-odds-api.com" target="_blank">Get free key ↗</a>
+  </div>
+  <div class="relay-info" id="relayInfo">
+    <span class="relay-dot" id="relayDot" style="background:#555"></span>
+    <span id="relayMsg">Local relay: checking… <span class="spinner"></span></span>
+    &nbsp;·&nbsp;
+    <span style="opacity:.7">Pi-hole users: run <code>node odds_relay.js</code> or whitelist <code>corsproxy.io</code></span>
+  </div>
+  <div class="status-box" id="statusBox"></div>
+  <span class="debug-toggle" onclick="toggleDebug()">▶ Show API debug log</span>
+  <div class="debug-panel" id="debugPanel"></div>
+</div>
+
+<!-- ══ TOP-LEVEL MODE SWITCHER ══ -->
+<div class="mode-bar">
+  <button class="mode-btn active" id="modePathBtn" onclick="switchMode('path')">⚽ Team Journey</button>
+  <button class="mode-btn" id="modeBracketBtn" onclick="switchMode('bracket')">🏆 Interactive Predictor</button>
+</div>
+
+<!-- ══ MODE: TEAM JOURNEY ══ -->
+<div class="mode-pane active" id="mode-path">
+  <div class="pv-controls">
+    <div class="pv-sw">
+      <input type="text" id="pvSearch" placeholder="Search any nation…" autocomplete="off" oninput="pvSearchInput(this)"/>
+      <div class="dd" id="pvDd" style="display:none"></div>
+    </div>
+    <button class="tbtn on" id="pvBtnR" onclick="pvSetMode('realistic')">Realistic path</button>
+    <button class="tbtn" id="pvBtnD" onclick="pvSetMode('dream')">Dream run</button>
+  </div>
+  <div class="pv-qs" id="pvQs"></div>
+  <div id="pvMain"></div>
+</div>
+
+<!-- ══ MODE: INTERACTIVE PREDICTOR ══ -->
+<div class="mode-pane" id="mode-bracket">
+  <div class="tabs">
+    <button class="tab active" id="tab-groups" onclick="showTab('groups')">Groups</button>
+    <button class="tab" id="tab-r32" onclick="showTab('r32')">Round of 32</button>
+    <button class="tab" id="tab-r16" onclick="showTab('r16')">Round of 16</button>
+    <button class="tab" id="tab-qf" onclick="showTab('qf')">Quarterfinals</button>
+    <button class="tab" id="tab-sf" onclick="showTab('sf')">Semifinals</button>
+    <button class="tab" id="tab-final" onclick="showTab('final')">Final</button>
+    <button class="tab" id="tab-results" onclick="showTab('results')">Full results</button>
+  </div>
+  <div id="pane-groups" class="pane active"></div>
+  <div id="pane-r32" class="pane"></div>
+  <div id="pane-r16" class="pane"></div>
+  <div id="pane-qf" class="pane"></div>
+  <div id="pane-sf" class="pane"></div>
+  <div id="pane-final" class="pane"></div>
+  <div id="pane-results" class="pane"></div>
+</div>
+
+<div id="tip" style="position:fixed;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:4px 9px;font-size:11px;pointer-events:none;z-index:999;display:none;max-width:260px"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// SHARED DATA — colours, rankings, groups, bracket structure
+// ═══════════════════════════════════════════════════════════════
+const TC={USA:{bg:'#3C3B6E',tx:'#FFFFFF'},Canada:{bg:'#FF0000',tx:'#FFFFFF'},Mexico:{bg:'#006847',tx:'#FFFFFF'},Japan:{bg:'#FF6FAE',tx:'#FFFFFF'},'New Zealand':{bg:'#000000',tx:'#FFFFFF'},Iran:{bg:'#239F40',tx:'#FFFFFF'},Argentina:{bg:'#4FA3FF',tx:'#FFFFFF'},Uzbekistan:{bg:'#1EB53A',tx:'#FFFFFF'},'South Korea':{bg:'#FFFFFF',tx:'#003478'},Jordan:{bg:'#C8102E',tx:'#FFFFFF'},Australia:{bg:'#FFD700',tx:'#006400'},Brazil:{bg:'#009C3B',tx:'#FFDF00'},Ecuador:{bg:'#003DA5',tx:'#FFD100'},Uruguay:{bg:'#5DADEC',tx:'#FFFFFF'},Colombia:{bg:'#FCD116',tx:'#003893'},Paraguay:{bg:'#D52B1E',tx:'#FFFFFF'},Morocco:{bg:'#C8102E',tx:'#008000'},Tunisia:{bg:'#D6001C',tx:'#FFFFFF'},Egypt:{bg:'#C8102E',tx:'#FFFFFF'},Algeria:{bg:'#006233',tx:'#FFFFFF'},Ghana:{bg:'#006B3F',tx:'#FCD116'},'Cape Verde':{bg:'#003DA5',tx:'#FFFFFF'},'South Africa':{bg:'#004225',tx:'#FFD700'},Qatar:{bg:'#8A1538',tx:'#FFFFFF'},England:{bg:'#FFFFFF',tx:'#FF0000'},'Saudi Arabia':{bg:'#006C35',tx:'#FFFFFF'},'Ivory Coast':{bg:'#FF8200',tx:'#FFFFFF'},Senegal:{bg:'#00853F',tx:'#FCD116'},France:{bg:'#000080',tx:'#FF0000'},Croatia:{bg:'#FF0000',tx:'#FFFFFF'},Portugal:{bg:'#006600',tx:'#FF0000'},Norway:{bg:'#BA0C2F',tx:'#FFFFFF'},Germany:{bg:'#000000',tx:'#FFCC00'},Netherlands:{bg:'#FF4F00',tx:'#FFFFFF'},Belgium:{bg:'#000000',tx:'#FFD700'},Austria:{bg:'#ED2939',tx:'#FFFFFF'},Switzerland:{bg:'#FF0000',tx:'#FFFFFF'},Spain:{bg:'#AA151B',tx:'#F1BF00'},Scotland:{bg:'#00205B',tx:'#FFFFFF'},Panama:{bg:'#003DA5',tx:'#FFFFFF'},Haiti:{bg:'#002D72',tx:'#FFFFFF'},'Curaçao':{bg:'#003DA5',tx:'#FFD100'},'FIFA PO-1':{bg:'#444455',tx:'#FFFFFF'},'FIFA PO-2':{bg:'#444455',tx:'#FFFFFF'},'UEFA PO-A':{bg:'#333344',tx:'#FFFFFF'},'UEFA PO-B':{bg:'#333344',tx:'#FFFFFF'},'UEFA PO-C':{bg:'#333344',tx:'#FFFFFF'},'UEFA PO-D':{bg:'#333344',tx:'#FFFFFF'}};
+const tc=t=>TC[t]||{bg:'#444455',tx:'#FFFFFF'};
+function hd(hex,a){let h=hex.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16);return'#'+[((n>>16)&255),((n>>8)&255),(n&255)].map(v=>Math.max(0,v-a).toString(16).padStart(2,'0')).join('');}
+function bgLuma(t){const c=tc(t);const n=parseInt(c.bg.replace('#',''),16);return((n>>16)&255)*0.299+((n>>8)&255)*0.587+(n&255)*0.114;}
+
+const FR={Spain:1,Argentina:2,France:3,England:4,Brazil:5,Portugal:6,Netherlands:7,Morocco:8,Belgium:9,Germany:10,Croatia:11,Senegal:12,Colombia:14,USA:15,Mexico:16,Uruguay:17,Switzerland:18,Japan:19,Iran:20,'South Korea':22,Ecuador:23,Austria:24,Australia:27,Algeria:28,Canada:29,Egypt:31,Scotland:32,Paraguay:33,Norway:34,'Saudi Arabia':35,'Ivory Coast':36,'South Africa':37,Ghana:38,Qatar:39,Tunisia:40,'New Zealand':50,'Cape Verde':55,Haiti:60,'Curaçao':82,Uzbekistan:90,Jordan:95,Panama:70,'FIFA PO-1':80,'FIFA PO-2':85,'UEFA PO-A':50,'UEFA PO-B':45,'UEFA PO-C':40,'UEFA PO-D':55};
+const rnk=t=>FR[t]||99;
+
+const OMAP={'Spain':'Spain','France':'France','England':'England','Argentina':'Argentina','Brazil':'Brazil','Portugal':'Portugal','Germany':'Germany','Netherlands':'Netherlands','Belgium':'Belgium','Croatia':'Croatia','Morocco':'Morocco','Senegal':'Senegal','Colombia':'Colombia','Mexico':'Mexico','Uruguay':'Uruguay','Switzerland':'Switzerland','Japan':'Japan','Iran':'Iran','Ecuador':'Ecuador','Austria':'Austria','Australia':'Australia','Algeria':'Algeria','Canada':'Canada','Egypt':'Egypt','Scotland':'Scotland','Paraguay':'Paraguay','Norway':'Norway','Ghana':'Ghana','Qatar':'Qatar','Tunisia':'Tunisia','Jordan':'Jordan','Panama':'Panama','Uzbekistan':'Uzbekistan','Haiti':'Haiti','United States':'USA','United States of America':'USA','USA':'USA','US':'USA','Saudi Arabia':'Saudi Arabia','Ivory Coast':'Ivory Coast',"Cote d'Ivoire":'Ivory Coast',"Côte d'Ivoire":'Ivory Coast','South Korea':'South Korea','Republic of Korea':'South Korea','Korea Republic':'South Korea','South Africa':'South Africa','New Zealand':'New Zealand','Cape Verde':'Cape Verde','Cabo Verde':'Cape Verde','Curacao':'Curaçao','Curaçao':'Curaçao'};
+
+const INIT={A:['Mexico','South Africa','South Korea','UEFA PO-D'],B:['Canada','Switzerland','Qatar','UEFA PO-A'],C:['Brazil','Morocco','Scotland','Haiti'],D:['USA','Paraguay','Australia','UEFA PO-C'],E:['Germany','Ecuador','Ivory Coast','Curaçao'],F:['Netherlands','Japan','UEFA PO-B','Tunisia'],G:['Belgium','Egypt','Iran','New Zealand'],H:['Spain','Uruguay','Saudi Arabia','Cape Verde'],I:['France','Senegal','Norway','FIFA PO-2'],J:['Argentina','Algeria','Austria','Jordan'],K:['Portugal','Colombia','Uzbekistan','FIFA PO-1'],L:['England','Croatia','Ghana','Panama']};
+const GD={A:'Jun 11–26',B:'Jun 12–26',C:'Jun 13–27',D:'Jun 12–26',E:'Jun 14–26',F:'Jun 14–25',G:'Jun 15–27',H:'Jun 15–26',I:'Jun 16–27',J:'Jun 15–27',K:'Jun 17–27',L:'Jun 17–26'};
+const GC={A:['Mexico City','Guadalajara','Atlanta'],B:['Toronto','Vancouver','Los Angeles'],C:['Boston','Seattle','San Francisco'],D:['Los Angeles','Seattle','San Francisco'],E:['Dallas','Kansas City','Dallas'],F:['Dallas','San Francisco','Houston'],G:['Atlanta','Philadelphia','Miami'],H:['Mexico City','Monterrey','Mexico City'],I:['Dallas','Houston','Kansas City'],J:['New York/NJ','San Francisco','New York/NJ'],K:['Houston','Mexico City','Houston'],L:['Dallas','Toronto','Philadelphia']};
+const R32D={73:[{g:'A',p:2},{g:'B',p:2}],74:[{g:'E',p:1},{b3:true,pool:'ABCDF'}],75:[{g:'F',p:1},{g:'C',p:2}],76:[{g:'C',p:1},{g:'F',p:2}],77:[{g:'I',p:1},{b3:true,pool:'CDFGH'}],78:[{g:'E',p:2},{g:'I',p:2}],79:[{g:'A',p:1},{b3:true,pool:'CEFHI'}],80:[{g:'L',p:1},{b3:true,pool:'EHIJK'}],81:[{g:'D',p:1},{b3:true,pool:'BEFIJ'}],82:[{g:'G',p:1},{b3:true,pool:'AEHIJ'}],83:[{g:'K',p:2},{g:'L',p:2}],84:[{g:'H',p:1},{g:'J',p:2}],85:[{g:'B',p:1},{b3:true,pool:'EFGIJ'}],86:[{g:'J',p:1},{g:'H',p:2}],87:[{g:'K',p:1},{b3:true,pool:'DEIJL'}],88:[{g:'D',p:2},{g:'G',p:2}]};
+const R16D={89:[73,88],90:[74,81],91:[75,82],92:[76,83],93:[77,84],94:[78,85],95:[79,86],96:[80,87]};
+const QFD={97:[89,90],98:[91,92],99:[93,94],100:[95,96]};
+const SFD={101:[97,98],102:[99,100]};
+const VEN={73:{c:'Los Angeles',s:'SoFi Stadium',d:'Jun 28'},74:{c:'Houston',s:'NRG Stadium',d:'Jun 29'},75:{c:'Monterrey',s:'Estadio BBVA',d:'Jun 29'},76:{c:'Dallas',s:'AT&T Stadium',d:'Jun 30'},77:{c:'Kansas City',s:'Arrowhead Stadium',d:'Jun 30'},78:{c:'Seattle',s:'Lumen Field',d:'Jul 1'},79:{c:'Mexico City',s:'Estadio Azteca',d:'Jul 1'},80:{c:'Vancouver',s:'BC Place',d:'Jul 1'},81:{c:'Philadelphia',s:'Lincoln Financial',d:'Jul 2'},82:{c:'San Francisco',s:"Levi's Stadium",d:'Jul 2'},83:{c:'Toronto',s:'BMO Field',d:'Jul 2'},84:{c:'Atlanta',s:'Mercedes-Benz',d:'Jul 2'},85:{c:'New York/NJ',s:'MetLife Stadium',d:'Jul 3'},86:{c:'Miami',s:'Hard Rock Stadium',d:'Jul 3'},87:{c:'Boston',s:'Gillette Stadium',d:'Jul 3'},88:{c:'Los Angeles',s:'SoFi Stadium',d:'Jul 3'},89:{c:'Philadelphia',s:'Lincoln Financial',d:'Jul 4'},90:{c:'Houston',s:'NRG Stadium',d:'Jul 5'},91:{c:'New York/NJ',s:'MetLife Stadium',d:'Jul 5'},92:{c:'Mexico City',s:'Estadio Azteca',d:'Jul 5'},93:{c:'Dallas',s:'AT&T Stadium',d:'Jul 6'},94:{c:'Seattle',s:'Lumen Field',d:'Jul 6'},95:{c:'Atlanta',s:'Mercedes-Benz',d:'Jul 7'},96:{c:'Vancouver',s:'BC Place',d:'Jul 7'},97:{c:'Boston',s:'Gillette Stadium',d:'Jul 9'},98:{c:'Los Angeles',s:'SoFi Stadium',d:'Jul 10'},99:{c:'Miami',s:'Hard Rock Stadium',d:'Jul 11'},100:{c:'Kansas City',s:'Arrowhead',d:'Jul 11'},101:{c:'Dallas',s:'AT&T Stadium',d:'Jul 14'},102:{c:'Atlanta',s:'Mercedes-Benz',d:'Jul 15'},103:{c:'Miami',s:'Hard Rock Stadium',d:'Jul 18'},104:{c:'New York/NJ',s:'MetLife Stadium',d:'Jul 19'}};
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED STATE
+// ═══════════════════════════════════════════════════════════════
+let G={};         // group standings
+let r32P={},r16P={},qfP={},sfP={},finP=null,th3P=null;  // bracket picks
+let odds={};      // team→decimal odds
+let oddsMode=false;
+let activeTab='groups';
+let debugLog=[];
+
+// ═══════════════════════════════════════════════════════════════
+// SHARED BRACKET RESOLUTION
+// ═══════════════════════════════════════════════════════════════
+function getGroup(t){for(const[g,ts]of Object.entries(INIT)){if(ts.includes(t))return g;}return null;}
+function grpSorted(g){return(G[g]||[]).slice().sort((a,b)=>{if(oddsMode){const oa=odds[a]||99999,ob=odds[b]||99999;return oa!==ob?oa-ob:rnk(a)-rnk(b);}return rnk(a)-rnk(b);});}
+function grp1(g){return grpSorted(g)[0];}
+function grp2(g){return grpSorted(g)[1];}
+function grp3(g){return grpSorted(g)[2];}
+function groupPos(team){const g=getGroup(team);return grpSorted(g).indexOf(team);}
+function winOf(arr){return arr.slice().sort((a,b)=>{if(oddsMode){const oa=odds[a]||99999,ob=odds[b]||99999;return oa!==ob?oa-ob:rnk(a)-rnk(b);}return rnk(a)-rnk(b);})[0];}
+function loserOf(arr){return arr.slice().sort((a,b)=>{if(oddsMode){const oa=odds[a]||99999,ob=odds[b]||99999;return oa!==ob?oa-ob:rnk(a)-rnk(b);}return rnk(a)-rnk(b);})[1];}
+
+function b3(pool){let best=null;for(const g of pool.split('')){const t=grp3(g);if(!t)continue;if(!best)best=t;else best=winOf([best,t]);}return best;}
+const r32A=m=>{const s=R32D[m][0];return s.b3?b3(s.pool):(G[s.g]||[])[s.p-1]||null;};
+const r32B=m=>{const s=R32D[m][1];return s.b3?b3(s.pool):(G[s.g]||[])[s.p-1]||null;};
+const r32W=m=>r32P[m]||null;
+const r32L=m=>{const w=r32W(m);if(!w)return null;const a=r32A(m),b=r32B(m);return w===a?b:a;};
+const r16A=m=>r32W(R16D[m][0]);const r16B=m=>r32W(R16D[m][1]);const r16W=m=>r16P[m]||null;
+const r16L=m=>{const w=r16W(m);if(!w)return null;const a=r16A(m),b=r16B(m);return w===a?b:a;};
+const qfA=m=>r16W(QFD[m][0]);const qfB=m=>r16W(QFD[m][1]);const qfW=m=>qfP[m]||null;
+const qfL=m=>{const w=qfW(m);if(!w)return null;const a=qfA(m),b=qfB(m);return w===a?b:a;};
+const sfA=m=>qfW(SFD[m][0]);const sfB=m=>qfW(SFD[m][1]);const sfW=m=>sfP[m]||null;
+const sfL=m=>{const w=sfW(m);if(!w)return null;const a=sfA(m),b=sfB(m);return w===a?b:a;};
+const finA=()=>sfW(101),finB=()=>sfW(102),th3A=()=>sfL(101),th3B=()=>sfL(102);
+
+// Pre-simulated bracket using best-ranked team at each stage
+function simR32T(m){return[r32A(m),r32B(m)];}
+function simR16T(m){return[winOf(simR32T(R16D[m][0])),winOf(simR32T(R16D[m][1]))];}
+function simQFT(m){return[winOf(simR16T(QFD[m][0])),winOf(simR16T(QFD[m][1]))];}
+function simSFT(m){return[winOf(simQFT(SFD[m][0])),winOf(simQFT(SFD[m][1]))];}
+
+function findR32MatchNum(team){
+  const g=getGroup(team);const pos=groupPos(team);if(pos>1)return null;const p=pos+1;
+  for(const[m,pair]of Object.entries(R32D)){for(const src of pair){if(src.g===g&&src.p===p)return parseInt(m);}}return null;
+}
+function findR16MatchNum(r32m){for(const[m,p]of Object.entries(R16D)){if(p.includes(r32m))return parseInt(m);}return null;}
+function findQFMatchNum(r16m){for(const[m,p]of Object.entries(QFD)){if(p.includes(r16m))return parseInt(m);}return null;}
+function findSFMatchNum(qfm){for(const[m,p]of Object.entries(SFD)){if(p.includes(qfm))return parseInt(m);}return null;}
+
+// ═══════════════════════════════════════════════════════════════
+// INVALIDATION
+// ═══════════════════════════════════════════════════════════════
+function invGroup(g){Object.entries(R32D).forEach(([m,srcs])=>{if(srcs.some(s=>s.g===g||(s.b3&&s.pool.includes(g)))){const mn=+m,w=r32P[mn];if(w&&w!==r32A(mn)&&w!==r32B(mn))invR32(mn);}});}
+function invR32(m){r32P[m]=null;Object.entries(R16D).forEach(([rm,p])=>{if(p.includes(m))invR16(+rm);});}
+function invR16(m){r16P[m]=null;Object.entries(QFD).forEach(([qm,p])=>{if(p.includes(m))invQF(+qm);});}
+function invQF(m){qfP[m]=null;Object.entries(SFD).forEach(([sm,p])=>{if(p.includes(m))invSF(+sm);});}
+function invSF(m){sfP[m]=null;finP=null;th3P=null;}
+function resetPicks(){r32P={};r16P={};qfP={};sfP={};finP=null;th3P=null;renderAll();}
+
+// ═══════════════════════════════════════════════════════════════
+// ODDS BADGE HELPER
+// ═══════════════════════════════════════════════════════════════
+const odStr=t=>(oddsMode&&odds[t])?odds[t].toFixed(1)+'x':'';
+function odBadge(t){return bgLuma(t)<40?{bg:'rgba(220,220,220,0.90)',color:'#1a1a1a'}:{bg:'rgba(0,0,0,0.60)',color:'#FFD700'};}
+
+// ═══════════════════════════════════════════════════════════════
+// SEEDING
+// ═══════════════════════════════════════════════════════════════
+function seedFIFA(){
+  odds={};oddsMode=false;
+  Object.entries(INIT).forEach(([g,ts])=>{G[g]=[...ts].sort((a,b)=>rnk(a)-rnk(b));});
+  resetPicks();
+  document.getElementById('btnFifa').classList.add('active');
+  document.getElementById('btnOdds').classList.remove('active');
+  document.getElementById('oddsSourceBadge').style.display='none';
+  setStatus('','');
+  if(pvSelTeam)pvDoRender(pvSelTeam);
+}
+
+const LOCAL_RELAY='http://localhost:3456';
+const FETCH_STRATEGIES=[
+  async key=>{log('Strategy 1: Local relay');const r=await fetch(`${LOCAL_RELAY}/odds?apiKey=${encodeURIComponent(key)}`,{signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error('Relay HTTP '+r.status);const data=await r.json();if(!Array.isArray(data))throw new Error((data.message||data.error||JSON.stringify(data)).slice(0,200));return{data,source:'local relay',remaining:r.headers.get('x-requests-remaining'),regions:r.headers.get('x-relay-regions')||'eu,uk'};},
+  async key=>{log('Strategy 2: corsproxy.io');const t=`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${key}&regions=eu&markets=outrights&oddsFormat=decimal`;const r=await fetch(`https://corsproxy.io/?url=${encodeURIComponent(t)}`,{signal:AbortSignal.timeout(12000)});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();if(!Array.isArray(data))throw new Error((data.message||JSON.stringify(data)).slice(0,200));return{data,source:'corsproxy.io',remaining:null,regions:'eu'};},
+  async key=>{log('Strategy 3: allorigins');const t=`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${key}&regions=eu&markets=outrights&oddsFormat=decimal`;const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,{signal:AbortSignal.timeout(12000)});if(!r.ok)throw new Error('HTTP '+r.status);const txt=await r.text();let data;try{const o=JSON.parse(txt);data=o.contents?JSON.parse(o.contents):o;}catch(e){throw new Error('parse: '+e.message);}if(!Array.isArray(data))throw new Error((data.message||JSON.stringify(data)).slice(0,200));return{data,source:'allorigins.win',remaining:null,regions:'eu'};},
+];
+
+async function seedOdds(){
+  const key=document.getElementById('apiKey').value.trim();
+  if(!key){setStatus('err','Paste your The Odds API key above first.\nGet one free at the-odds-api.com (500 req/month)');return;}
+  log('\n=== Odds fetch ===');
+  document.getElementById('sp').style.display='inline-block';
+  document.getElementById('btnOdds').classList.add('disabled');
+  setStatus('info','Fetching odds…');
+  let result=null;
+  for(let i=0;i<FETCH_STRATEGIES.length;i++){setStatus('info','Trying strategy '+(i+1)+' of '+FETCH_STRATEGIES.length+'…');try{result=await FETCH_STRATEGIES[i](key);log('Strategy '+(i+1)+' OK via '+result.source);break;}catch(e){log('Strategy '+(i+1)+' failed: '+e.message);}}
+  try{
+    if(!result)throw new Error('All fetch strategies failed.\n\nPi-hole fix: run node odds_relay.js\nOr: pihole -w corsproxy.io\n\nSee SETUP_INSTRUCTIONS.txt');
+    const{data,source,remaining,regions}=result;
+    log('Events: '+data.length);
+    if(!data.length)throw new Error('API returned 0 events — market not posted yet. Use FIFA Ranking mode.');
+    if(data[0])log('\nFirst event:\n'+JSON.stringify(data[0],null,2).slice(0,800));
+    const sums={},counts={};
+    data.forEach(ev=>{(ev.bookmakers||[]).forEach(bk=>{(bk.markets||[]).forEach(mkt=>{if(mkt.key!=='outrights')return;(mkt.outcomes||[]).forEach(o=>{const raw=(o.name||'').trim(),name=OMAP[raw]||raw;if(!sums[name])sums[name]=0,counts[name]=0;sums[name]+=parseFloat(o.price)||0;counts[name]++;});});});});
+    const parsed={};Object.keys(sums).forEach(t=>{if(counts[t]>0)parsed[t]=+(sums[t]/counts[t]).toFixed(2);});
+    log('\nOdds:');Object.entries(parsed).sort((a,b)=>a[1]-b[1]).forEach(([t,o])=>{log('  '+(Object.values(INIT).flat().includes(t)?'✓':'✗')+' "'+t+'": '+o.toFixed(2)+'x');});
+    const bt=new Set(Object.values(INIT).flat());
+    const cleaned={};Object.entries(parsed).forEach(([t,o])=>{if(bt.has(t))cleaned[t]=o;});
+    if(!Object.keys(cleaned).length)throw new Error('No team names matched. Open debug log for raw names.');
+    odds=cleaned;oddsMode=true;
+    Object.entries(INIT).forEach(([g,ts])=>{G[g]=[...ts].sort((a,b)=>{const oa=odds[a]||99999,ob=odds[b]||99999;return oa!==ob?oa-ob:rnk(a)-rnk(b);});});
+    resetPicks();
+    document.getElementById('btnFifa').classList.remove('active');document.getElementById('btnOdds').classList.add('active');
+    document.getElementById('oddsSourceBadge').textContent='Live odds · '+(regions||'eu')+' · '+Object.keys(cleaned).length+' teams';
+    document.getElementById('oddsSourceBadge').style.display='inline-block';
+    const noOdds=Array.from(bt).filter(t=>TC[t]&&!cleaned[t]);
+    const bkCount=data.reduce((n,ev)=>n+(ev.bookmakers||[]).length,0);
+    setStatus('ok','✓ Odds loaded via '+source+' · '+Object.keys(cleaned).length+' teams · '+(regions||'eu')+' · '+bkCount+' bookmaker entries'+(remaining?' · '+remaining+' req remaining':'')+(noOdds.length?'\n⚠ '+noOdds.length+' teams without odds (FIFA rank): '+noOdds.slice(0,5).join(', ')+(noOdds.length>5?' +more':''):''));
+    if(pvSelTeam)pvDoRender(pvSelTeam);
+  }catch(e){log('\nERROR: '+e.message);setStatus('err','✗ '+e.message);}
+  finally{document.getElementById('sp').style.display='none';document.getElementById('btnOdds').classList.remove('disabled');}
+}
+
+async function checkRelay(){
+  try{const r=await fetch(`${LOCAL_RELAY}/health`,{signal:AbortSignal.timeout(2000)});const j=await r.json();if(j.status==='ok'){document.getElementById('relayDot').style.background='var(--green)';document.getElementById('relayMsg').innerHTML='<strong style="color:var(--green)">Local relay running</strong> — live odds will fetch via your machine';log('Relay healthy');}}
+  catch(e){document.getElementById('relayDot').style.background='var(--orange)';document.getElementById('relayMsg').innerHTML='Local relay not running · <strong>Pi-hole users:</strong> run <code>node odds_relay.js</code> first, or whitelist <code>corsproxy.io</code> in Pi-hole';log('Relay not available');}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TEAM JOURNEY — simulation
+// ═══════════════════════════════════════════════════════════════
+function simulatePath(team){
+  const g=getGroup(team);const pos=groupPos(team);const stages=[];
+  if(pos>1)return{exitStage:'group',groupPos:pos,stages:[]};
+  const r32m=findR32MatchNum(team);if(!r32m)return{exitStage:'group',groupPos:pos,stages:[]};
+  const r32opp=simR32T(r32m).find(t=>t!==team)||simR32T(r32m)[0];const r32win=winOf([team,r32opp])===team;
+  stages.push({stage:'R32',matchNum:r32m,opp:r32opp,teamWins:r32win,venue:VEN[r32m]||{}});
+  if(!r32win)return{exitStage:'R32',groupPos:pos,stages};
+  const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);const r16opp=winOf(simR32T(otherR32));const r16win=winOf([team,r16opp])===team;
+  stages.push({stage:'R16',matchNum:r16m,opp:r16opp,teamWins:r16win,venue:VEN[r16m]||{}});
+  if(!r16win)return{exitStage:'R16',groupPos:pos,stages};
+  const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);const qfopp=winOf(simR16T(otherR16));const qfwin=winOf([team,qfopp])===team;
+  stages.push({stage:'QF',matchNum:qfm,opp:qfopp,teamWins:qfwin,venue:VEN[qfm]||{}});
+  if(!qfwin)return{exitStage:'QF',groupPos:pos,stages};
+  const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);const sfopp=winOf(simQFT(otherQF));const sfwin=winOf([team,sfopp])===team;
+  stages.push({stage:'SF',matchNum:sfm,opp:sfopp,teamWins:sfwin,venue:VEN[sfm]||{}});
+  if(!sfwin)return{exitStage:'SF',groupPos:pos,stages};
+  const isSF101=sfm===101;const finalOpp=winOf(simSFT(isSF101?102:101));const finalwin=winOf([team,finalOpp])===team;
+  return{exitStage:finalwin?'Winner':'Final',groupPos:pos,stages,finalOpp};
+}
+
+function buildDreamPath(team){
+  const g=getGroup(team);const pos=groupPos(team);const dreamP=Math.min(pos,1)+1;
+  let r32m=null;for(const[m,pair]of Object.entries(R32D)){for(const src of pair){if(src.g===g&&src.p===dreamP){r32m=parseInt(m);break;}}if(r32m)break;}
+  if(!r32m)return{stages:[],finalOpp:null,sfm:null};
+  const r32oppSrc=R32D[r32m].find(src=>!(src.g===g&&src.p===dreamP));
+  const r32opp=r32oppSrc.b3?b3(r32oppSrc.pool):(G[r32oppSrc.g]||[])[r32oppSrc.p-1];
+  const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);const r16opp=winOf(simR32T(otherR32));
+  const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);const qfopp=winOf(simR16T(otherR16));
+  const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);const sfopp=winOf(simQFT(otherQF));
+  const otherSF=sfm===101?102:101;const finalOpp=winOf(simSFT(otherSF));
+  return{stages:[{stage:'R32',matchNum:r32m,opp:r32opp,venue:VEN[r32m]||{}},{stage:'R16',matchNum:r16m,opp:r16opp,venue:VEN[r16m]||{}},{stage:'QF',matchNum:qfm,opp:qfopp,venue:VEN[qfm]||{}},{stage:'SF',matchNum:sfm,opp:sfopp,venue:VEN[sfm]||{}}],finalOpp,sfm};
+}
+
+function getActualChain(r32m){
+  const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);
+  const r16actual=[winOf(simR32T(r32m)),winOf(simR32T(otherR32))];
+  const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);
+  const qfactual=[winOf(simR16T(r16m)),winOf(simR16T(otherR16))];
+  const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);
+  const sfactual=[winOf(simQFT(qfm)),winOf(simQFT(otherQF))];
+  return{r16m,r16actual,qfm,qfactual,sfm,sfactual,r16v:VEN[r16m]||{},qfv:VEN[qfm]||{},sfv:VEN[sfm]||{}};
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TEAM JOURNEY — rendering
+// ═══════════════════════════════════════════════════════════════
+let pvSelTeam=null,pvMode='realistic';
+
+function pvSetMode(m){pvMode=m;document.getElementById('pvBtnR').className='tbtn'+(m==='realistic'?' on':'');document.getElementById('pvBtnD').className='tbtn'+(m==='dream'?' on':'');if(pvSelTeam)pvDoRender(pvSelTeam);}
+
+function pvStrip(t,isPrimary){
+  const c=tc(t);const od=odStr(t);
+  const rkBadge=(()=>{const b=odBadge(t);return`<span class="tstrip-rk" style="background:${b.bg};color:${b.color}">#${rnk(t)}</span>`;})();
+  const odBadgeHtml=od?(()=>{const b=odBadge(t);return`<span class="tstrip-rk" style="background:${b.bg};color:${b.color};margin-left:3px">${od}</span>`;})():'';
+  if(isPrimary)return`<div class="tstrip" style="background:${c.bg}"><span class="tstrip-name" style="color:${c.tx}">${t}</span>${odBadgeHtml}${rkBadge}</div>`;
+  return`<div class="tstrip" style="background:${c.bg}"><span class="tstrip-name" style="color:${c.tx}">${t}</span>${odBadgeHtml}${rkBadge}</div>`;
+}
+
+function pvCard(tA,tB,label,venue,dimmed,dreamTag){
+  const c=tc(tA);
+  const bg=dimmed?'background:var(--surface2);border:0.5px solid var(--border);opacity:0.5;':`background:var(--surface);border:0.5px solid ${c.bg}50;`;
+  const tag=dreamTag?`<span class="dream-note">if they win</span>`:'';
+  return`<div class="pv-mc" style="${bg}"><div class="pv-mc-meta"><span>${label}${tag}</span><span>${venue.d||venue.date||''}</span></div>${pvStrip(tA,true)}${pvStrip(tB,false)}<div class="pv-mv">${venue.c||venue.city||''}${(venue.s||venue.stad)?' · '+(venue.s||venue.stad):''}</div></div>`;
+}
+
+function pvNeutralCard(tA,tB,label,venue){
+  return`<div class="pv-mc"><div class="pv-mc-meta"><span>${label}</span><span>${venue.d||venue.date||''}</span></div>${pvStrip(tA,true)}${pvStrip(tB,true)}<div class="pv-mv">${venue.c||venue.city||''}${(venue.s||venue.stad)?' · '+(venue.s||venue.stad):''}</div></div>`;
+}
+
+const pvSLBLS={R32:'Round of 32 · Jun 28–Jul 3',R16:'Round of 16 · Jul 4–7',QF:'Quarterfinal · Jul 9–11',SF:'Semifinal · Jul 14–15'};
+const pvStageTxt=s=>({R32:'Round of 32',R16:'Round of 16',QF:'Quarterfinal',SF:'Semifinal',Final:'The Final',group:'Group stage',Winner:'Tournament winner'}[s]||s);
+function pvSec(lbl,content){return`<div class="stage-sec"><div class="stage-lbl">${lbl}</div>${content}</div>`;}
+
+function pvColHeader(team,g,badge){
+  const c=tc(team);
+  return`<div class="col-hdr" style="border-bottom:2px solid ${c.bg}60">
+    <div class="cswatch" style="background:${c.bg};border:0.5px solid ${c.bg}80"></div>
+    <span class="cn">${team}</span><span class="cs">Group ${g} · #${rnk(team)}</span>
+    <span class="best-badge" style="background:${c.bg};color:${c.tx};border:0.5px solid ${c.bg}80">${badge}</span>
+  </div>`;
+}
+
+function pvGroupSection(team,g){
+  const opps=(G[g]||[]).filter(t=>t!==team);
+  let h=`<div class="stage-sec"><div class="stage-lbl">Group stage · ${GD[g]}</div>`;
+  opps.forEach((opp,i)=>{h+=pvCard(team,opp,`Group ${g} · M${i+1}`,{d:`~Jun ${11+i*3+(g.charCodeAt(0)-65)%5}`,c:GC[g]?.[i]||''},false,false);});
+  return h+'</div>';
+}
+
+function pvBuildLeft(team,path){
+  const g=getGroup(team);const c=tc(team);const pos=path.groupPos;const exit=path.exitStage;
+  const exitLabel=pvStageTxt(exit==='Winner'?'Winner':exit);
+  const bestLabel=exit==='Winner'?'Tournament winner':exit==='Final'?'Finalist':exitLabel+' exit';
+  let h=pvColHeader(team,g,bestLabel);
+  h+=pvGroupSection(team,g);
+  if(exit==='group'){
+    const exitBehind=grpSorted(g).slice(0,pos).filter(t=>t!==team);
+    h+=`<div class="exit-banner" style="background:${c.bg}20;color:${c.bg};border-color:${c.bg}50"><span>★</span><span>Likely group exit — behind ${exitBehind.join(' & ')} · Real bracket below</span></div>`;
+    const r32mBase=findR32MatchNum(grp1(g));
+    if(r32mBase){const ch=getActualChain(r32mBase);h+=pvSec('Round of 32 · actual',pvNeutralCard(simR32T(r32mBase)[0],simR32T(r32mBase)[1],`M${r32mBase}`,VEN[r32mBase]||{}));h+=pvSec('Round of 16 · actual',pvNeutralCard(ch.r16actual[0],ch.r16actual[1],`M${ch.r16m}`,ch.r16v));h+=pvSec('Quarterfinal · actual',pvNeutralCard(ch.qfactual[0],ch.qfactual[1],`M${ch.qfm}`,ch.qfv));h+=pvSec('Semifinal · actual',pvNeutralCard(ch.sfactual[0],ch.sfactual[1],`M${ch.sfm}`,ch.sfv));}
+    return h;
+  }
+  const stageKeys=['R32','R16','QF','SF'];
+  for(let i=0;i<path.stages.length;i++){
+    const s=path.stages[i];if(s.stage==='Final')continue;
+    const isExit=!s.teamWins;
+    h+=`<div class="stage-sec"><div class="stage-lbl">${pvSLBLS[s.stage]||s.stage}</div>`;
+    h+=pvCard(team,s.opp,`M${s.matchNum}`,s.venue,false,false);
+    if(isExit){
+      h+=`<div class="exit-banner" style="background:${c.bg}20;color:${c.bg};border-color:${c.bg}50"><span>★</span><span>Likely exit: ${team} face higher-ranked ${s.opp} (#${rnk(s.opp)}) · Real bracket continues below</span></div></div>`;
+      const r32mBase=findR32MatchNum(grp1(g))||findR32MatchNum(grp2(g));
+      const ch=getActualChain(r32mBase);
+      for(const rs of stageKeys.slice(stageKeys.indexOf(s.stage)+1)){
+        const lbl={R16:'Round of 16 · Jul 4–7',QF:'Quarterfinal · Jul 9–11',SF:'Semifinal · Jul 14–15'}[rs];
+        let card='';
+        if(rs==='R16')card=pvNeutralCard(ch.r16actual[0],ch.r16actual[1],`M${ch.r16m}`,ch.r16v);
+        else if(rs==='QF')card=pvNeutralCard(ch.qfactual[0],ch.qfactual[1],`M${ch.qfm}`,ch.qfv);
+        else if(rs==='SF')card=pvNeutralCard(ch.sfactual[0],ch.sfactual[1],`M${ch.sfm}`,ch.sfv);
+        if(card)h+=pvSec(lbl+' · actual bracket',card);
+      }
+      return h;
+    }
+    h+='</div>';
+  }
+  return h;
+}
+
+function pvBuildLeftDream(team){
+  const g=getGroup(team);const realisticExit=pvStageTxt(simulatePath(team).exitStage);
+  const{stages}=buildDreamPath(team);
+  let h=pvColHeader(team,g,'Dream run finalist');
+  h+=`<div style="font-size:10px;color:var(--text2);padding:4px 2px 8px;opacity:.8">Realistic exit: <strong>${realisticExit}</strong> · Hypothetical path if ${team} won every match</div>`;
+  h+=pvGroupSection(team,g);
+  for(const s of stages){h+=`<div class="stage-sec"><div class="stage-lbl">${pvSLBLS[s.stage]||s.stage}</div>${pvCard(team,s.opp,`M${s.matchNum}`,s.venue,false,true)}</div>`;}
+  return h;
+}
+
+function pvBuildRight(rightTeam){
+  const g=getGroup(rightTeam);const path=simulatePath(rightTeam);
+  let h=pvColHeader(rightTeam,g,'Projected finalist');
+  h+=pvGroupSection(rightTeam,g);
+  for(const s of path.stages){if(s.stage==='Final')continue;h+=`<div class="stage-sec"><div class="stage-lbl">${pvSLBLS[s.stage]||s.stage}</div>${pvCard(rightTeam,s.opp,`M${s.matchNum}`,s.venue,false,false)}</div>`;}
+  return h;
+}
+
+function pvTeamPill(team,sub){
+  const c=tc(team);const od=odStr(team);
+  return`<div class="finalist-block"><div class="finalist-pill" style="background:${c.bg}"><span style="font-size:14px;font-weight:600;color:${c.tx}">${team}</span>${od?`<span style="font-size:9px;margin-left:6px;padding:1px 5px;border-radius:3px;background:rgba(0,0,0,0.5);color:#FFD700;font-weight:700">${od}</span>`:''}</div>${sub?`<div class="finalist-sub">${sub}</div>`:''}</div>`;
+}
+
+function pvFwPanel(title,dateVenue,tA,tB,subA,subB,bgOverride,note){
+  const c=tc(tA);return`<div class="fw-card" style="background:${bgOverride||c.bg+'10'};border-color:${c.bg}40"><div style="font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">${title}</div><div class="two-team-row">${pvTeamPill(tA,subA)}<div class="vs-txt">vs</div>${pvTeamPill(tB,subB)}</div><div style="font-size:11px;color:var(--text2);margin-top:10px">${dateVenue}</div>${note?`<p style="font-size:10px;color:var(--text2);margin-top:6px">${note}</p>`:''}</div>`;
+}
+
+function pvDoRender(team){
+  const main=document.getElementById('pvMain');
+  if(!team){main.innerHTML='<div class="no-sel">Select any nation above to explore their World Cup path</div>';return;}
+  const g=getGroup(team);if(!g){main.innerHTML='<div class="no-sel">Team not found</div>';return;}
+  const isDream=pvMode==='dream';const path=simulatePath(team);const c=tc(team);
+  const r32mBase=findR32MatchNum(grp1(g))||findR32MatchNum(grp2(g));
+  let teamSFMatch=null;
+  if(r32mBase){const r16m=findR16MatchNum(r32mBase);const qfm=findQFMatchNum(r16m);teamSFMatch=findSFMatchNum(qfm);}
+  const otherSFMatch=teamSFMatch===101?102:101;
+  const rightFinalist=winOf(simSFT(otherSFMatch));
+  const leftFinalist=winOf(simSFT(teamSFMatch||101));
+  let thirdA,thirdB;
+  if(isDream){const dr=buildDreamPath(team);thirdA=dr.stages.find(s=>s.stage==='SF')?.opp||loserOf(simSFT(101));thirdB=loserOf(simSFT(dr.sfm===101?102:101));}
+  else{thirdA=loserOf(simSFT(101));thirdB=loserOf(simSFT(102));}
+  const exitLabel=pvStageTxt(path.exitStage==='Winner'?'Winner':path.exitStage);
+  const bestDesc=path.exitStage==='Winner'?'projected tournament winner':path.exitStage==='Final'?'projected finalist':`projected to exit at the ${exitLabel}`;
+  const summaryBg=isDream||path.exitStage==='Final'||path.exitStage==='Winner'?`${c.bg}18`:'#1a1200';
+  const summaryBorder=isDream||path.exitStage==='Final'||path.exitStage==='Winner'?`${c.bg}50`:'#c9a71050';
+  const summaryTxt=isDream?`Dream run — showing every opponent ${team} would face on the way to the final`:`${team} (#${rnk(team)}) are ${bestDesc} based on current ${oddsMode?'betting odds':'FIFA rankings'}`;
+  let html=`<div class="summary-bar" style="background:${summaryBg};border-color:${summaryBorder}"><span style="color:var(--text)">${summaryTxt}</span></div>`;
+  const leftCol=isDream?pvBuildLeftDream(team):pvBuildLeft(team,path);
+  const rightCol=pvBuildRight(rightFinalist);
+  html+=`<div class="dual"><div>${leftCol}</div><div>${rightCol}</div></div>`;
+  html+=`<div class="divider"><div class="divider-line"></div><div class="divider-txt">3rd place match · Miami · July 18, 2026</div><div class="divider-line"></div></div>`;
+  html+=pvFwPanel('3rd place · Hard Rock Stadium, Miami','July 18, 2026 · Hard Rock Stadium, Miami',thirdA,thirdB,isDream?'SF runner-up (dream)':'SF runner-up','SF runner-up',null,null);
+  const dr2=isDream?buildDreamPath(team):null;
+  const dispLeft=isDream?team:leftFinalist;const dispRight=isDream?(dr2?.finalOpp||rightFinalist):rightFinalist;
+  const lfc=tc(dispLeft);
+  html+=`<div class="divider" style="margin-top:1rem"><div class="divider-line"></div><div class="divider-txt">The final · MetLife Stadium · July 19, 2026</div><div class="divider-line"></div></div>`;
+  html+=pvFwPanel('The final · MetLife Stadium, East Rutherford NJ','July 19, 2026 · MetLife Stadium, New Jersey',dispLeft,dispRight,isDream&&team!==leftFinalist?'dream finalist':null,null,`${lfc.bg}15`,isDream&&team!==leftFinalist?`Realistic projected final: ${leftFinalist} vs ${rightFinalist} · Based on ${oddsMode?'betting odds':'FIFA rankings'}`:`Based on ${oddsMode?'live betting odds (EU+UK)':'FIFA world rankings · January 2026'}`);
+  main.innerHTML=html;
+}
+
+// Team Journey search
+function pvSearchInput(el){
+  const q=el.value.toLowerCase();const dd=document.getElementById('pvDd');
+  if(!q){dd.style.display='none';return;}
+  const m=Object.values(INIT).flat().filter(t=>t.toLowerCase().includes(q));
+  if(!m.length){dd.style.display='none';return;}
+  dd.innerHTML=m.map(t=>{const c=tc(t);return`<div class="di" onclick="pvPick('${t.replace(/'/g,"\\'")}')"><span class="cswatch" style="background:${c.bg};border:1px solid ${c.bg}60"></span>${t}<span style="font-size:10px;color:var(--text2);margin-left:auto">#${rnk(t)} · Grp ${getGroup(t)}</span></div>`;}).join('');
+  dd.style.display='block';
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.pv-sw'))document.getElementById('pvDd').style.display='none';});
+function pvPick(t){pvSelTeam=t;document.getElementById('pvSearch').value=t;document.getElementById('pvDd').style.display='none';pvDoRender(t);}
+
+// ═══════════════════════════════════════════════════════════════
+// INTERACTIVE PREDICTOR — rendering
+// ═══════════════════════════════════════════════════════════════
+function btTeamBt(t,state,mNum,fn){
+  if(!t)return`<div class="tbd-row"><span class="tbd-lbl">TBD</span></div>`;
+  const c=tc(t);const bg=state==='lose'?c.bg+'44':c.bg;const ico=state==='win'?'✓':state==='lose'?'✗':'';
+  const click=state==='sel'||state==='win';
+  const oc=click?(state==='win'?`_pk('${fn}',${mNum},null)`:`_pk('${fn}',${mNum},'${t.replace(/'/g,"\\'")}')`):'';
+  const od=odStr(t);const odb=odBadge(t);const rkb=odBadge(t);
+  return`<div class="bt ${state}" style="background:${bg};color:${c.tx}${click?';cursor:pointer':''}" ${oc?`onclick="${oc}"`:''} onmouseenter="tip(event,'${t} · #${rnk(t)}${odds[t]?' · '+odds[t].toFixed(2)+'x':''}')" onmouseleave="hideTip()"><span class="bt-ico">${ico}</span><span class="bt-nm">${t}</span>${od?`<span class="bt-od" style="background:${odb.bg};color:${odb.color}">${od}</span>`:''}<span class="bt-rk" style="background:${rkb.bg};color:${rkb.color};padding:1px 4px;border-radius:3px">#${rnk(t)}</span></div>`;
+}
+function _pk(fn,m,t){if(fn==='r32')pkR32(m,t);else if(fn==='r16')pkR16(m,t);else if(fn==='qf')pkQF(m,t);else if(fn==='sf')pkSF(m,t);}
+
+function btMc(mNum,tA,tB,winner,fn){const v=VEN[mNum]||{};const can=tA&&tB;const sA=winner?(winner===tA?'win':'lose'):(can?'sel':'');const sB=winner?(winner===tB?'win':'lose'):(can?'sel':'');const bc=winner?hd(tc(winner).bg,20):'#2a2a3a';return`<div class="mc" style="border-color:${bc}"><div class="mc-meta"><span>M${mNum}</span><span>${v.d||''}</span></div>${btTeamBt(tA,sA,mNum,fn)}${btTeamBt(tB,sB,mNum,fn)}<div class="mc-ven">${v.c||''}${v.s?' · '+v.s:''}</div></div>`;}
+
+function renderGroups(){
+  let h=`<div class="hlbl">${oddsMode?'<span style="color:#ffaa44">★ Seeded by live betting odds</span> · lower = more favoured.':'Seeded by FIFA world ranking.'} Use ▲▼ to reorder.</div>`;
+  if(oddsMode)h+=`<div class="odds-note">Orange badge = decimal odds. Teams without listed odds use FIFA rank.</div>`;
+  h+=`<div class="groups-grid">`;
+  Object.entries(G).forEach(([g,ts])=>{
+    h+=`<div class="group-card"><div class="group-title"><span>Group ${g}</span><span>${GD[g]}</span></div><div class="group-teams">`;
+    ts.forEach((t,i)=>{
+      const c=tc(t);const od=odStr(t);const pl=['1st','2nd','3rd','4th'][i];
+      h+=`<div class="team-row" style="background:${c.bg};color:${c.tx}"><span class="pos-lbl">${pl}</span><span class="tn">${t}</span>${od?(()=>{const b=odBadge(t);return`<span class="ob" style="background:${b.bg};color:${b.color}">${od}</span>`;})():''}<span class="tr">#${rnk(t)}</span><div class="move-btns">${i>0?`<button class="mbtn" style="color:${c.tx}" onclick="mv('${g}',${i},-1)">▲</button>`:'<span style="width:14px"></span>'}${i<3?`<button class="mbtn" style="color:${c.tx}" onclick="mv('${g}',${i},1)">▼</button>`:'<span style="width:14px"></span>'}</div></div>`;
+      if(i===1)h+=`<div class="qual-line"></div><div class="qual-lbl">R32 cutoff</div>`;
+    });
+    h+=`</div></div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('pane-groups').innerHTML=h;
+}
+
+function renderKO(pid,nums,gA,gB,gW,fn,lock){const el=document.getElementById('pane-'+pid);if(lock){el.innerHTML=`<div style="color:var(--text2);padding:20px;font-size:12px">${lock}</div>`;return;}let h=oddsMode?`<div class="odds-note">Decimal odds in badge. Click to pick; click winner to deselect.</div>`:`<div class="hlbl">Click to pick match winner. Click winner to deselect.</div>`;h+=`<div class="ko-grid">`;nums.forEach(m=>{h+=btMc(m,gA(m),gB(m),gW(m),fn);});h+=`</div>`;el.innerHTML=h;}
+function renderR32(){renderKO('r32',Object.keys(R32D).map(Number).sort((a,b)=>a-b),r32A,r32B,r32W,'r32',null);}
+function renderR16(){if(!Object.keys(R32D).every(m=>r32P[m]))return renderKO('r16',[],null,null,null,null,'Complete all 16 Round of 32 picks to unlock Round of 16.');renderKO('r16',Object.keys(R16D).map(Number).sort((a,b)=>a-b),r16A,r16B,r16W,'r16',null);}
+function renderQF(){if(!Object.keys(R16D).every(m=>r16P[m]))return renderKO('qf',[],null,null,null,null,'Complete all 8 Round of 16 picks to unlock Quarterfinals.');renderKO('qf',Object.keys(QFD).map(Number).sort((a,b)=>a-b),qfA,qfB,qfW,'qf',null);}
+function renderSF(){if(!Object.keys(QFD).every(m=>qfP[m]))return renderKO('sf',[],null,null,null,null,'Complete all 4 Quarterfinal picks to unlock Semifinals.');renderKO('sf',[101,102],sfA,sfB,sfW,'sf',null);}
+
+function renderFinal(){
+  const el=document.getElementById('pane-final');
+  if(!sfP[101]||!sfP[102]){el.innerHTML=`<div style="color:var(--text2);padding:20px;font-size:12px">Complete both Semifinal picks to unlock the Final.</div>`;return;}
+  const fpBt=(t,winner,fn)=>{if(!t)return`<div style="text-align:center;color:#555;font-style:italic;font-size:11px">TBD</div>`;const c=tc(t);const isW=winner===t,isL=winner&&winner!==t;const od=odStr(t);return`<div class="fp ${isW?'fw':isL?'fl':''}" style="background:${c.bg};border-color:${isW?c.bg:'var(--border2)'}" onclick="${fn}('${t.replace(/'/g,"\\'")}')" onmouseenter="tip(event,'${t} · #${rnk(t)}${odds[t]?' · '+odds[t].toFixed(2)+'x':''}')" onmouseleave="hideTip()"><div class="fp-nm" style="color:${c.tx}">${t}</div><div class="fp-rk" style="color:${c.tx}">FIFA #${rnk(t)}</div>${od?`<div class="fp-od">${od}</div>`:''}${isW?`<div style="font-size:10px;color:${c.tx};margin-top:3px;opacity:.8">✓ Winner</div>`:''}</div>`;};
+  let h=oddsMode?`<div class="odds-note" style="margin-bottom:14px">Decimal odds shown. Click to pick winner.</div>`:'';
+  h+=`<div class="slbl">3rd place · Hard Rock Stadium, Miami · Jul 18</div>`;h+=`<div class="fg">${fpBt(th3A(),th3P,'pk3rd')}<div class="vs-c">vs</div>${fpBt(th3B(),th3P,'pk3rd')}</div>`;h+=`<div class="vn">Hard Rock Stadium, Miami · July 18, 2026</div>`;
+  if(th3P){const c=tc(th3P);h+=`<div style="margin-top:8px;display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;background:${c.bg}20;border:1px solid ${c.bg}40"><span style="background:${c.bg};color:${c.tx};padding:3px 10px;border-radius:5px;font-size:11px;font-weight:600">${th3P}</span><span style="font-size:11px;color:#aa8800">🥉 3rd</span></div>`;}
+  h+=`<div class="vsep"></div>`;h+=`<div class="slbl">The Final · MetLife Stadium, NJ · Jul 19</div>`;h+=`<div class="fg">${fpBt(finA(),finP,'pkFin')}<div class="vs-c">vs</div>${fpBt(finB(),finP,'pkFin')}</div>`;h+=`<div class="vn">MetLife Stadium, East Rutherford NJ · July 19, 2026</div>`;
+  if(finP){const c=tc(finP);h+=`<div class="wbox" style="background:${c.bg}20;border:1px solid ${c.bg}50"><div style="font-size:24px;margin-bottom:8px">🏆</div><div style="font-size:11px;color:var(--text2);margin-bottom:8px">2026 FIFA World Cup Champion</div><div style="display:inline-block;padding:8px 24px;border-radius:10px;background:${c.bg};color:${c.tx};font-size:15px;font-weight:700">${finP}</div></div>`;}
+  el.innerHTML=h;
+}
+
+function renderResults(){
+  let h=`<div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Group standings</div><div class="rgg">`;
+  Object.entries(G).forEach(([g,ts])=>{h+=`<div class="rgc"><div class="rgt">Group ${g}</div>`;ts.forEach((t,i)=>{const c=tc(t),od=odStr(t);h+=`<div class="rgi" style="${i>=2?'opacity:.35':''}"><span class="sw" style="background:${c.bg}"></span><span style="min-width:14px;color:var(--text2);font-size:9px">${i+1}.</span>${t}${od?`<span style="font-size:9px;color:#ffaa44;margin-left:3px">${od}</span>`:''}</div>`;});h+=`</div>`;});
+  h+=`</div>`;
+  const rounds=[{lbl:'Round of 32',pk:r32P,ga:r32A,gb:r32B},{lbl:'Round of 16',pk:r16P,ga:r16A,gb:r16B},{lbl:'Quarterfinals',pk:qfP,ga:qfA,gb:qfB},{lbl:'Semifinals',pk:sfP,ga:sfA,gb:sfB}];
+  rounds.forEach(({lbl,pk,ga,gb})=>{const e=Object.entries(pk).filter(([,v])=>v);if(!e.length)return;h+=`<div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);margin:12px 0 6px">${lbl}</div><div class="kog">`;e.sort((a,b)=>+a[0]-+b[0]).forEach(([m,w])=>{const lo=w===ga(+m)?gb(+m):ga(+m);const c=tc(w);const od=odStr(w);h+=`<div class="koi"><span class="kor">M${m}</span><div class="kot"><div style="display:flex;align-items:center;gap:5px"><span class="sw" style="background:${c.bg}"></span><span class="kowinner">${w}</span>${od?`<span style="font-size:9px;color:#ffaa44">${od}</span>`:''}<span style="font-size:9px;color:var(--green)">wins</span></div>${lo?`<div style="opacity:.38;font-size:10px;padding-left:13px">${lo}</div>`:''}</div></div>`;});h+=`</div>`;});
+  if(th3P||finP){h+=`<div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);margin:12px 0 6px">Finals</div><div class="kog">`;if(th3P){const lo=th3P===th3A()?th3B():th3A();const c=tc(th3P);h+=`<div class="koi"><span class="kor">3rd</span><div class="kot"><div style="display:flex;align-items:center;gap:5px"><span class="sw" style="background:${c.bg}"></span><span class="kowinner">${th3P}</span><span style="font-size:9px;color:#aa8800">🥉</span></div>${lo?`<div style="opacity:.38;font-size:10px;padding-left:13px">${lo}</div>`:''}</div></div>`;}if(finP){const lo=finP===finA()?finB():finA();const c=tc(finP);h+=`<div class="koi"><span class="kor">Champ</span><div class="kot"><div style="display:flex;align-items:center;gap:5px"><span class="sw" style="background:${c.bg}"></span><span class="kowinner">${finP}</span><span style="font-size:9px;color:var(--gold)">🏆</span></div>${lo?`<div style="opacity:.38;font-size:10px;padding-left:13px">${lo} (runner-up)</div>`:''}</div></div>`;}h+=`</div>`;}
+  document.getElementById('pane-results').innerHTML=h;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BRACKET PICK HANDLERS
+// ═══════════════════════════════════════════════════════════════
+function pkR32(m,t){if(t===null)invR32(m);else{r32P[m]=t;Object.entries(R16D).forEach(([rm,p])=>{if(p.includes(m)){const r=+rm;if(r16P[r]&&r16P[r]!==r16A(r)&&r16P[r]!==r16B(r))invR16(r);}});}renderAll();}
+function pkR16(m,t){if(t===null)invR16(m);else{r16P[m]=t;Object.entries(QFD).forEach(([q,p])=>{if(p.includes(m)){const qn=+q;if(qfP[qn]&&qfP[qn]!==qfA(qn)&&qfP[qn]!==qfB(qn))invQF(qn);}});}renderAll();}
+function pkQF(m,t){if(t===null)invQF(m);else{qfP[m]=t;Object.entries(SFD).forEach(([s,p])=>{if(p.includes(m)){const sn=+s;if(sfP[sn]&&sfP[sn]!==sfA(sn)&&sfP[sn]!==sfB(sn))invSF(sn);}});}renderAll();}
+function pkSF(m,t){if(t===null)invSF(m);else{sfP[m]=t;finP=null;th3P=null;}renderAll();}
+function pkFin(t){finP=finP===t?null:t;renderAll();}
+function pk3rd(t){th3P=th3P===t?null:t;renderAll();}
+function mv(g,i,d){const a=G[g],n=i+d;if(n<0||n>3)return;[a[i],a[n]]=[a[n],a[i]];invGroup(g);renderAll();}
+
+// ═══════════════════════════════════════════════════════════════
+// MODE SWITCHER + TAB SYSTEM
+// ═══════════════════════════════════════════════════════════════
+let activeMode='path';
+function switchMode(m){
+  activeMode=m;
+  document.querySelectorAll('.mode-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('mode-'+m).classList.add('active');
+  document.getElementById('mode'+m.charAt(0).toUpperCase()+m.slice(1)+'Btn').classList.add('active');
+  if(m==='bracket')renderBracketTab();
+  else if(m==='path'&&pvSelTeam)pvDoRender(pvSelTeam);
+}
+function showTab(t){activeTab=t;document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));document.getElementById('pane-'+t).classList.add('active');document.getElementById('tab-'+t).classList.add('active');renderBracketTab();}
+function renderBracketTab(){if(activeTab==='groups')renderGroups();else if(activeTab==='r32')renderR32();else if(activeTab==='r16')renderR16();else if(activeTab==='qf')renderQF();else if(activeTab==='sf')renderSF();else if(activeTab==='final')renderFinal();else if(activeTab==='results')renderResults();}
+
+function renderAll(){
+  if(activeMode==='bracket')renderBracketTab();
+  else if(pvSelTeam)pvDoRender(pvSelTeam);
+  updateBadge();
+}
+
+function updateBadge(){
+  const b=document.getElementById('progressBadge');
+  const r32c=Object.values(r32P).filter(Boolean).length;const r16c=Object.values(r16P).filter(Boolean).length;const qfc=Object.values(qfP).filter(Boolean).length;const sfc=Object.values(sfP).filter(Boolean).length;
+  let l='Group stage';if(r32c>0)l=`R32: ${r32c}/16`;if(r32c===16)l=`R16: ${r16c}/8`;if(r16c===8)l=`QF: ${qfc}/4`;if(qfc===4)l=`SF: ${sfc}/2`;if(sfc===2)l='Final ready';if(finP)l='Complete ✓';
+  b.textContent=l;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════
+function setStatus(type,msg){const el=document.getElementById('statusBox');el.className='status-box';if(type){el.classList.add(type);el.textContent=msg;el.style.display='block';}else{el.style.display='none';}}
+function log(msg){debugLog.push(msg);if(debugLog.length>400)debugLog.shift();const p=document.getElementById('debugPanel');if(p.classList.contains('open')){p.textContent=debugLog.join('\n');p.scrollTop=p.scrollHeight;}}
+function toggleDebug(){const p=document.getElementById('debugPanel');const t=document.querySelector('.debug-toggle');p.classList.toggle('open');t.textContent=p.classList.contains('open')?'▼ Hide API debug log':'▶ Show API debug log';if(p.classList.contains('open')){p.textContent=debugLog.join('\n');p.scrollTop=p.scrollHeight;}}
+function tip(e,txt){const t=document.getElementById('tip');t.textContent=txt;t.style.display='block';t.style.left=e.clientX+12+'px';t.style.top=e.clientY-28+'px';}
+function hideTip(){document.getElementById('tip').style.display='none';}
+document.addEventListener('mousemove',e=>{const t=document.getElementById('tip');if(t.style.display!=='none'){t.style.left=e.clientX+12+'px';t.style.top=e.clientY-28+'px';}});
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  const k=localStorage.getItem('wc2026_oddskey');
+  if(k)document.getElementById('apiKey').value=k;
+  document.getElementById('apiKey').addEventListener('input',function(){localStorage.setItem('wc2026_oddskey',this.value.trim());});
+  checkRelay();
+  // Quick-select links
+  const presets=['Argentina','Brazil','Australia','USA','England','Japan','Morocco','Spain'];
+  document.getElementById('pvQs').innerHTML='Try: '+presets.map(t=>`<span onclick="pvPick('${t}')">${t}</span>`).join(' · ');
+});
+
+seedFIFA();
+pvDoRender(null);
+</script>
+</body>
+</html>
