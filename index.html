@@ -102,6 +102,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .divider-line{flex:1;height:0.5px;background:var(--border)}
 .divider-txt{font-size:11px;color:var(--text2);white-space:nowrap}
 .fw-card{border-radius:12px;padding:14px;text-align:center;border:0.5px solid var(--border);margin-bottom:0}
+.pv-predicted-winner{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 16px;border-radius:8px;margin-top:10px;width:100%}
 .two-team-row{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
 .finalist-block{text-align:center}
 .finalist-pill{display:inline-block;padding:7px 20px;border-radius:8px;min-width:120px}
@@ -536,19 +537,28 @@ function pvBuildRight(rightTeam){
   return h;
 }
 
-function pvTeamPill(team,sub,isPredWinner){
+function pvTeamPill(team,sub){
   const c=tc(team);const od=odStr(team);
-  const winnerBadge=isPredWinner?`<div style="font-size:10px;color:${c.tx};margin-top:4px;opacity:.85;font-weight:600">★ Predicted winner</div>`:'';
-  const border=isPredWinner?`border:2px solid ${c.tx}40;`:'';
-  return`<div class="finalist-block"><div class="finalist-pill" style="background:${c.bg};${border}"><span style="font-size:14px;font-weight:600;color:${c.tx}">${team}</span>${od?`<span style="font-size:9px;margin-left:6px;padding:1px 5px;border-radius:3px;background:rgba(0,0,0,0.5);color:#FFD700;font-weight:700">${od}</span>`:''}</div>${winnerBadge}${sub?`<div class="finalist-sub">${sub}</div>`:''}</div>`;
+  return`<div class="finalist-block"><div class="finalist-pill" style="background:${c.bg}"><span style="font-size:14px;font-weight:600;color:${c.tx}">${team}</span>${od?`<span style="font-size:9px;margin-left:6px;padding:1px 5px;border-radius:3px;background:rgba(0,0,0,0.5);color:#FFD700;font-weight:700">${od}</span>`:''}</div>${sub?`<div class="finalist-sub">${sub}</div>`:''}</div>`;
 }
 
-function pvFwPanel(title,dateVenue,tA,tB,subA,subB,bgOverride,note){
+function pvFwPanel(title,dateVenue,tA,tB,subA,subB,bgOverride,note,predicted,icon){
   const c=tc(tA);
-  // Predicted winner is the team favoured by odds (if loaded) or FIFA rank
-  const predWinner=winOf([tA,tB]);
-  const wA=predWinner===tA,wB=predWinner===tB;
-  return`<div class="fw-card" style="background:${bgOverride||c.bg+'10'};border-color:${c.bg}40"><div style="font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">${title}</div><div class="two-team-row">${pvTeamPill(tA,subA,wA)}<div class="vs-txt">vs</div>${pvTeamPill(tB,subB,wB)}</div><div style="font-size:11px;color:var(--text2);margin-top:10px">${dateVenue}</div>${note?`<p style="font-size:10px;color:var(--text2);margin-top:6px">${note}</p>`:''}</div>`;
+  const winnerIcon=icon||'🏆';
+  const winnerHtml=predicted?(()=>{
+    const wc=tc(predicted);
+    return`<div class="pv-predicted-winner" style="background:${wc.bg};color:${wc.tx}">
+      <span style="font-size:11px;opacity:.8;margin-right:6px">${winnerIcon} Predicted winner:</span>
+      <span style="font-weight:700;font-size:13px">${predicted}</span>
+    </div>`;
+  })():'';
+  return`<div class="fw-card" style="background:${bgOverride||c.bg+'12'};border-color:${c.bg}40">
+    <div style="font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">${title}</div>
+    <div class="two-team-row">${pvTeamPill(tA,subA)}<div class="vs-txt">vs</div>${pvTeamPill(tB,subB)}</div>
+    ${winnerHtml}
+    <div style="font-size:11px;color:var(--text2);margin-top:8px">${dateVenue}</div>
+    ${note?`<p style="font-size:10px;color:var(--text2);margin-top:6px">${note}</p>`:''}
+  </div>`;
 }
 
 function pvDoRender(team){
@@ -575,12 +585,14 @@ function pvDoRender(team){
   const rightCol=pvBuildRight(rightFinalist);
   html+=`<div class="dual"><div>${leftCol}</div><div>${rightCol}</div></div>`;
   html+=`<div class="divider"><div class="divider-line"></div><div class="divider-txt">3rd place match · Miami · July 18, 2026</div><div class="divider-line"></div></div>`;
-  html+=pvFwPanel('3rd place · Hard Rock Stadium, Miami','July 18, 2026 · Hard Rock Stadium, Miami',thirdA,thirdB,isDream?'SF runner-up (dream)':'SF runner-up','SF runner-up',null,null);
+  const predicted3rd=thirdA&&thirdB?winOf([thirdA,thirdB]):null;
+  html+=pvFwPanel('3rd place · Hard Rock Stadium, Miami','July 18, 2026 · Hard Rock Stadium, Miami',thirdA,thirdB,isDream?'SF runner-up (dream)':'SF runner-up','SF runner-up',null,null,predicted3rd,'🥉');
   const dr2=isDream?buildDreamPath(team):null;
   const dispLeft=isDream?team:leftFinalist;const dispRight=isDream?(dr2?.finalOpp||rightFinalist):rightFinalist;
   const lfc=tc(dispLeft);
   html+=`<div class="divider" style="margin-top:1rem"><div class="divider-line"></div><div class="divider-txt">The final · MetLife Stadium · July 19, 2026</div><div class="divider-line"></div></div>`;
-  html+=pvFwPanel('The final · MetLife Stadium, East Rutherford NJ','July 19, 2026 · MetLife Stadium, New Jersey',dispLeft,dispRight,isDream&&team!==leftFinalist?'dream finalist':null,null,`${lfc.bg}15`,isDream&&team!==leftFinalist?`Realistic projected final: ${leftFinalist} vs ${rightFinalist} · Based on ${oddsMode?'betting odds':'FIFA rankings'}`:`Based on ${oddsMode?'live betting odds (EU+UK)':'FIFA world rankings · January 2026'}`);
+  const predictedFinal=dispLeft&&dispRight?winOf([dispLeft,dispRight]):null;
+  html+=pvFwPanel('The final · MetLife Stadium, East Rutherford NJ','July 19, 2026 · MetLife Stadium, New Jersey',dispLeft,dispRight,isDream&&team!==leftFinalist?'dream finalist':null,null,`${lfc.bg}15`,isDream&&team!==leftFinalist?`Realistic projected final: ${leftFinalist} vs ${rightFinalist} · Based on ${oddsMode?'betting odds':'FIFA rankings'}`:`Based on ${oddsMode?'live betting odds (EU+UK)':'FIFA world rankings · January 2026'}`,predictedFinal);
   main.innerHTML=html;
 }
 
