@@ -212,6 +212,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
     <button class="tbtn on" id="pvBtnR" onclick="pvSetMode('realistic')">Realistic path</button>
     <button class="tbtn" id="pvBtnD" onclick="pvSetMode('dream')">Dream run</button>
+    <button class="tbtn" id="pvBtnO" onclick="pvSetMode('odds')">Sports odds</button>
   </div>
   <div class="pv-qs" id="pvQs"></div>
   <div id="pvMain"></div>
@@ -297,14 +298,34 @@ const sfA=m=>qfW(SFD[m][0]);const sfB=m=>qfW(SFD[m][1]);const sfW=m=>sfP[m]||nul
 const sfL=m=>{const w=sfW(m);if(!w)return null;const a=sfA(m),b=sfB(m);return w===a?b:a;};
 const finA=()=>sfW(101),finB=()=>sfW(102),th3A=()=>sfL(101),th3B=()=>sfL(102);
 
-// Pre-simulated bracket using best-ranked team at each stage
-function simR32T(m){return[r32A(m),r32B(m)];}
-function simR16T(m){return[winOf(simR32T(R16D[m][0])),winOf(simR32T(R16D[m][1]))];}
-function simQFT(m){return[winOf(simR16T(QFD[m][0])),winOf(simR16T(QFD[m][1]))];}
-function simSFT(m){return[winOf(simQFT(SFD[m][0])),winOf(simQFT(SFD[m][1]))];}
+// ── Pure FIFA-rank helpers (never use odds) ─────────────────────
+// Used exclusively by Realistic and Dream path modes.
+function rnkWin(arr){return arr.slice().sort((a,b)=>rnk(a)-rnk(b))[0];}
+function rnkLose(arr){return arr.slice().sort((a,b)=>rnk(a)-rnk(b))[1];}
+// Rank-sorted group position (always by FIFA rank, ignores oddsMode)
+function grpByRank(g){return(G[g]||[]).slice().sort((a,b)=>rnk(a)-rnk(b));}
+function grp1R(g){return grpByRank(g)[0];}
+function grp2R(g){return grpByRank(g)[1];}
+function grp3R(g){return grpByRank(g)[2];}
+function groupPosRank(team){const g=getGroup(team);return grpByRank(g).indexOf(team);}
+function b3rank(pool){let best=null;for(const g of pool.split('')){const t=grp3R(g);if(!t)continue;if(!best)best=t;else best=rnkWin([best,t]);}return best;}
+// Rank-only R32 slot resolvers
+const r32AR=m=>{const s=R32D[m][0];return s.b3?b3rank(s.pool):grpByRank(s.g)[s.p-1]||null;};
+const r32BR=m=>{const s=R32D[m][1];return s.b3?b3rank(s.pool):grpByRank(s.g)[s.p-1]||null;};
+// Pre-simulated bracket using pure FIFA rank
+function simR32T(m){return[r32AR(m),r32BR(m)];}
+function simR16T(m){return[rnkWin(simR32T(R16D[m][0])),rnkWin(simR32T(R16D[m][1]))];}
+function simQFT(m){return[rnkWin(simR16T(QFD[m][0])),rnkWin(simR16T(QFD[m][1]))];}
+function simSFT(m){return[rnkWin(simQFT(SFD[m][0])),rnkWin(simQFT(SFD[m][1]))];}
+// ── Odds-aware versions (used only by Sports Odds mode) ──────────
+function simR32TO(m){return[r32A(m),r32B(m)];}
+function simR16TO(m){return[winOf(simR32TO(R16D[m][0])),winOf(simR32TO(R16D[m][1]))];}
+function simQFTO(m){return[winOf(simR16TO(QFD[m][0])),winOf(simR16TO(QFD[m][1]))];}
+function simSFTO(m){return[winOf(simQFTO(SFD[m][0])),winOf(simQFTO(SFD[m][1]))];}
 
 function findR32MatchNum(team){
-  const g=getGroup(team);const pos=groupPos(team);if(pos>1)return null;const p=pos+1;
+  // Always use FIFA rank position — never odds — so realistic/dream paths are stable
+  const g=getGroup(team);const pos=groupPosRank(team);if(pos>1)return null;const p=pos+1;
   for(const[m,pair]of Object.entries(R32D)){for(const src of pair){if(src.g===g&&src.p===p)return parseInt(m);}}return null;
 }
 function findR16MatchNum(r32m){for(const[m,p]of Object.entries(R16D)){if(p.includes(r32m))return parseInt(m);}return null;}
@@ -338,6 +359,8 @@ function seedFIFA(){
   document.getElementById('btnOdds').classList.remove('active');
   document.getElementById('oddsSourceBadge').style.display='none';
   setStatus('','');
+  // Reset odds path mode if odds are cleared
+  if(pvMode==='odds'){pvMode='realistic';document.getElementById('pvBtnR').className='tbtn on';document.getElementById('pvBtnO').className='tbtn';}
   if(pvSelTeam)pvDoRender(pvSelTeam);
 }
 
@@ -393,46 +416,78 @@ async function checkRelay(){
 // TEAM JOURNEY — simulation
 // ═══════════════════════════════════════════════════════════════
 function simulatePath(team){
-  const g=getGroup(team);const pos=groupPos(team);const stages=[];
+  // Pure FIFA rank — completely isolated from oddsMode
+  const g=getGroup(team);const pos=groupPosRank(team);const stages=[];
   if(pos>1)return{exitStage:'group',groupPos:pos,stages:[]};
   const r32m=findR32MatchNum(team);if(!r32m)return{exitStage:'group',groupPos:pos,stages:[]};
-  const r32opp=simR32T(r32m).find(t=>t!==team)||simR32T(r32m)[0];const r32win=winOf([team,r32opp])===team;
+  const r32opp=simR32T(r32m).find(t=>t!==team)||simR32T(r32m)[0];const r32win=rnkWin([team,r32opp])===team;
   stages.push({stage:'R32',matchNum:r32m,opp:r32opp,teamWins:r32win,venue:VEN[r32m]||{}});
   if(!r32win)return{exitStage:'R32',groupPos:pos,stages};
-  const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);const r16opp=winOf(simR32T(otherR32));const r16win=winOf([team,r16opp])===team;
+  const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);const r16opp=rnkWin(simR32T(otherR32));const r16win=rnkWin([team,r16opp])===team;
   stages.push({stage:'R16',matchNum:r16m,opp:r16opp,teamWins:r16win,venue:VEN[r16m]||{}});
   if(!r16win)return{exitStage:'R16',groupPos:pos,stages};
-  const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);const qfopp=winOf(simR16T(otherR16));const qfwin=winOf([team,qfopp])===team;
+  const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);const qfopp=rnkWin(simR16T(otherR16));const qfwin=rnkWin([team,qfopp])===team;
   stages.push({stage:'QF',matchNum:qfm,opp:qfopp,teamWins:qfwin,venue:VEN[qfm]||{}});
   if(!qfwin)return{exitStage:'QF',groupPos:pos,stages};
-  const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);const sfopp=winOf(simQFT(otherQF));const sfwin=winOf([team,sfopp])===team;
+  const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);const sfopp=rnkWin(simQFT(otherQF));const sfwin=rnkWin([team,sfopp])===team;
   stages.push({stage:'SF',matchNum:sfm,opp:sfopp,teamWins:sfwin,venue:VEN[sfm]||{}});
   if(!sfwin)return{exitStage:'SF',groupPos:pos,stages};
-  const isSF101=sfm===101;const finalOpp=winOf(simSFT(isSF101?102:101));const finalwin=winOf([team,finalOpp])===team;
+  const isSF101=sfm===101;const finalOpp=rnkWin(simSFT(isSF101?102:101));const finalwin=rnkWin([team,finalOpp])===team;
   return{exitStage:finalwin?'Winner':'Final',groupPos:pos,stages,finalOpp};
 }
 
 function buildDreamPath(team){
-  const g=getGroup(team);const pos=groupPos(team);const dreamP=Math.min(pos,1)+1;
+  // Pure FIFA rank — isolated from oddsMode
+  const g=getGroup(team);const pos=groupPosRank(team);const dreamP=Math.min(pos,1)+1;
   let r32m=null;for(const[m,pair]of Object.entries(R32D)){for(const src of pair){if(src.g===g&&src.p===dreamP){r32m=parseInt(m);break;}}if(r32m)break;}
   if(!r32m)return{stages:[],finalOpp:null,sfm:null};
   const r32oppSrc=R32D[r32m].find(src=>!(src.g===g&&src.p===dreamP));
-  const r32opp=r32oppSrc.b3?b3(r32oppSrc.pool):(G[r32oppSrc.g]||[])[r32oppSrc.p-1];
-  const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);const r16opp=winOf(simR32T(otherR32));
-  const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);const qfopp=winOf(simR16T(otherR16));
-  const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);const sfopp=winOf(simQFT(otherQF));
-  const otherSF=sfm===101?102:101;const finalOpp=winOf(simSFT(otherSF));
+  const r32opp=r32oppSrc.b3?b3rank(r32oppSrc.pool):grpByRank(r32oppSrc.g)[r32oppSrc.p-1];
+  const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);const r16opp=rnkWin(simR32T(otherR32));
+  const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);const qfopp=rnkWin(simR16T(otherR16));
+  const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);const sfopp=rnkWin(simQFT(otherQF));
+  const otherSF=sfm===101?102:101;const finalOpp=rnkWin(simSFT(otherSF));
   return{stages:[{stage:'R32',matchNum:r32m,opp:r32opp,venue:VEN[r32m]||{}},{stage:'R16',matchNum:r16m,opp:r16opp,venue:VEN[r16m]||{}},{stage:'QF',matchNum:qfm,opp:qfopp,venue:VEN[qfm]||{}},{stage:'SF',matchNum:sfm,opp:sfopp,venue:VEN[sfm]||{}}],finalOpp,sfm};
 }
 
 function getActualChain(r32m){
+  // Pure FIFA rank
   const r16m=findR16MatchNum(r32m);const otherR32=R16D[r16m].find(x=>x!==r32m);
-  const r16actual=[winOf(simR32T(r32m)),winOf(simR32T(otherR32))];
+  const r16actual=[rnkWin(simR32T(r32m)),rnkWin(simR32T(otherR32))];
   const qfm=findQFMatchNum(r16m);const otherR16=QFD[qfm].find(x=>x!==r16m);
-  const qfactual=[winOf(simR16T(r16m)),winOf(simR16T(otherR16))];
+  const qfactual=[rnkWin(simR16T(r16m)),rnkWin(simR16T(otherR16))];
   const sfm=findSFMatchNum(qfm);const otherQF=SFD[sfm].find(x=>x!==qfm);
-  const sfactual=[winOf(simQFT(qfm)),winOf(simQFT(otherQF))];
+  const sfactual=[rnkWin(simQFT(qfm)),rnkWin(simQFT(otherQF))];
   return{r16m,r16actual,qfm,qfactual,sfm,sfactual,r16v:VEN[r16m]||{},qfv:VEN[qfm]||{},sfv:VEN[sfm]||{}};
+}
+
+function simulateOddsPath(team){
+  // Odds-aware path — uses betting odds to determine winners at every stage
+  // Group position by odds, opponents by odds-sorted bracket
+  const g=getGroup(team);
+  // Use odds-sorted position if odds available, else rank
+  const pos=oddsMode?grpSorted(g).indexOf(team):groupPosRank(team);
+  const stages=[];
+  if(pos>1)return{exitStage:'group',groupPos:pos,stages:[]};
+  // Find R32 match using odds-sorted position
+  const p=pos+1;
+  let r32m=null;
+  for(const[m,pair]of Object.entries(R32D)){for(const src of pair){if(src.g===g&&src.p===p){r32m=parseInt(m);break;}}if(r32m)break;}
+  if(!r32m)return{exitStage:'group',groupPos:pos,stages:[]};
+  const r32opp=simR32TO(r32m).find(t=>t!==team)||simR32TO(r32m)[0];const r32win=winOf([team,r32opp])===team;
+  stages.push({stage:'R32',matchNum:r32m,opp:r32opp,teamWins:r32win,venue:VEN[r32m]||{}});
+  if(!r32win)return{exitStage:'R32',groupPos:pos,stages};
+  const r16m=findR16MatchNum(r32m);const otherR32O=R16D[r16m].find(x=>x!==r32m);const r16opp=winOf(simR32TO(otherR32O));const r16win=winOf([team,r16opp])===team;
+  stages.push({stage:'R16',matchNum:r16m,opp:r16opp,teamWins:r16win,venue:VEN[r16m]||{}});
+  if(!r16win)return{exitStage:'R16',groupPos:pos,stages};
+  const qfm=findQFMatchNum(r16m);const otherR16O=QFD[qfm].find(x=>x!==r16m);const qfopp=winOf(simR16TO(otherR16O));const qfwin=winOf([team,qfopp])===team;
+  stages.push({stage:'QF',matchNum:qfm,opp:qfopp,teamWins:qfwin,venue:VEN[qfm]||{}});
+  if(!qfwin)return{exitStage:'QF',groupPos:pos,stages};
+  const sfm=findSFMatchNum(qfm);const otherQFO=SFD[sfm].find(x=>x!==qfm);const sfopp=winOf(simQFTO(otherQFO));const sfwin=winOf([team,sfopp])===team;
+  stages.push({stage:'SF',matchNum:sfm,opp:sfopp,teamWins:sfwin,venue:VEN[sfm]||{}});
+  if(!sfwin)return{exitStage:'SF',groupPos:pos,stages};
+  const isSF101=sfm===101;const finalOpp=winOf(simSFTO(isSF101?102:101));const finalwin=winOf([team,finalOpp])===team;
+  return{exitStage:finalwin?'Winner':'Final',groupPos:pos,stages,finalOpp};
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -440,7 +495,20 @@ function getActualChain(r32m){
 // ═══════════════════════════════════════════════════════════════
 let pvSelTeam=null,pvMode='realistic';
 
-function pvSetMode(m){pvMode=m;document.getElementById('pvBtnR').className='tbtn'+(m==='realistic'?' on':'');document.getElementById('pvBtnD').className='tbtn'+(m==='dream'?' on':'');if(pvSelTeam)pvDoRender(pvSelTeam);}
+function pvSetMode(m){
+  pvMode=m;
+  document.getElementById('pvBtnR').className='tbtn'+(m==='realistic'?' on':'');
+  document.getElementById('pvBtnD').className='tbtn'+(m==='dream'?' on':'');
+  document.getElementById('pvBtnO').className='tbtn'+(m==='odds'?' on':'');
+  if(m==='odds'&&!oddsMode){
+    setStatus('err','Load live betting odds first — paste your API key in the seed bar above and click "Live betting odds"');
+    pvMode='realistic';
+    document.getElementById('pvBtnR').className='tbtn on';
+    document.getElementById('pvBtnO').className='tbtn';
+    return;
+  }
+  if(pvSelTeam)pvDoRender(pvSelTeam);
+}
 
 function pvStrip(t,isPrimary){
   const c=tc(t);const od=odStr(t);
@@ -519,6 +587,45 @@ function pvBuildLeft(team,path){
   return h;
 }
 
+function pvBuildLeftOdds(team,path){
+  // Identical layout to pvBuildLeft but labels reference odds rather than FIFA rank
+  const g=getGroup(team);const c=tc(team);const pos=path.groupPos;const exit=path.exitStage;
+  const exitLabel=pvStageTxt(exit==='Winner'?'Winner':exit);
+  const bestLabel=exit==='Winner'?'Tournament winner (by odds)':exit==='Final'?'Finalist (by odds)':exitLabel+' exit (by odds)';
+  let h=pvColHeader(team,g,bestLabel);
+  h+=pvGroupSection(team,g);
+  if(exit==='group'){
+    const exitBehind=grpSorted(g).slice(0,pos).filter(t=>t!==team);
+    h+=`<div class="exit-banner" style="background:${c.bg}25;color:${c.tx};border-color:${c.bg}60"><span>★</span><span>Bookmakers expect group exit — behind ${exitBehind.join(' & ')} in odds · Actual bracket below</span></div>`;
+    const r32mBase=findR32MatchNum(grp1(g));
+    if(r32mBase){const ch=getActualChain(r32mBase);h+=pvSec('Round of 32 · actual',pvNeutralCard(simR32TO(r32mBase)[0],simR32TO(r32mBase)[1],`M${r32mBase}`,VEN[r32mBase]||{}));h+=pvSec('Round of 16 · actual',pvNeutralCard(ch.r16actual[0],ch.r16actual[1],`M${ch.r16m}`,ch.r16v));h+=pvSec('Quarterfinal · actual',pvNeutralCard(ch.qfactual[0],ch.qfactual[1],`M${ch.qfm}`,ch.qfv));h+=pvSec('Semifinal · actual',pvNeutralCard(ch.sfactual[0],ch.sfactual[1],`M${ch.sfm}`,ch.sfv));}
+    return h;
+  }
+  const stageKeys=['R32','R16','QF','SF'];
+  for(let i=0;i<path.stages.length;i++){
+    const s=path.stages[i];if(s.stage==='Final')continue;
+    const isExit=!s.teamWins;
+    h+=`<div class="stage-sec"><div class="stage-lbl">${pvSLBLS[s.stage]||s.stage}</div>`;
+    h+=pvCard(team,s.opp,`M${s.matchNum}`,s.venue,false,false);
+    if(isExit){
+      h+=`<div class="exit-banner" style="background:${c.bg}25;color:${c.tx};border-color:${c.bg}60"><span>★</span><span>Bookmakers favour ${s.opp} (${odds[s.opp]?odds[s.opp].toFixed(1)+'x odds':'shorter odds'} vs ${team}${odds[team]?' '+odds[team].toFixed(1)+'x':''}) · Actual bracket continues below</span></div></div>`;
+      const r32mBase=findR32MatchNum(grp1(g))||findR32MatchNum(grp2(g));
+      const ch=getActualChain(r32mBase);
+      for(const rs of stageKeys.slice(stageKeys.indexOf(s.stage)+1)){
+        const lbl={R16:'Round of 16 · Jul 4–7',QF:'Quarterfinal · Jul 9–11',SF:'Semifinal · Jul 14–15'}[rs];
+        let card='';
+        if(rs==='R16')card=pvNeutralCard(ch.r16actual[0],ch.r16actual[1],`M${ch.r16m}`,ch.r16v);
+        else if(rs==='QF')card=pvNeutralCard(ch.qfactual[0],ch.qfactual[1],`M${ch.qfm}`,ch.qfv);
+        else if(rs==='SF')card=pvNeutralCard(ch.sfactual[0],ch.sfactual[1],`M${ch.sfm}`,ch.sfv);
+        if(card)h+=pvSec(lbl+' · actual bracket',card);
+      }
+      return h;
+    }
+    h+='</div>';
+  }
+  return h;
+}
+
 function pvBuildLeftDream(team){
   const g=getGroup(team);const realisticExit=pvStageTxt(simulatePath(team).exitStage);
   const{stages}=buildDreamPath(team);
@@ -565,7 +672,10 @@ function pvDoRender(team){
   const main=document.getElementById('pvMain');
   if(!team){main.innerHTML='<div class="no-sel">Select any nation above to explore their World Cup path</div>';return;}
   const g=getGroup(team);if(!g){main.innerHTML='<div class="no-sel">Team not found</div>';return;}
-  const isDream=pvMode==='dream';const path=simulatePath(team);const c=tc(team);
+  const isDream=pvMode==='dream';const isOdds=pvMode==='odds';
+  // Realistic and Dream always use pure FIFA rank; Sports Odds uses odds-aware sim
+  const path=isOdds?simulateOddsPath(team):simulatePath(team);
+  const c=tc(team);
   const r32mBase=findR32MatchNum(grp1(g))||findR32MatchNum(grp2(g));
   let teamSFMatch=null;
   if(r32mBase){const r16m=findR16MatchNum(r32mBase);const qfm=findQFMatchNum(r16m);teamSFMatch=findSFMatchNum(qfm);}
@@ -573,26 +683,35 @@ function pvDoRender(team){
   const rightFinalist=winOf(simSFT(otherSFMatch));
   const leftFinalist=winOf(simSFT(teamSFMatch||101));
   let thirdA,thirdB;
-  if(isDream){const dr=buildDreamPath(team);thirdA=dr.stages.find(s=>s.stage==='SF')?.opp||loserOf(simSFT(101));thirdB=loserOf(simSFT(dr.sfm===101?102:101));}
-  else{thirdA=loserOf(simSFT(101));thirdB=loserOf(simSFT(102));}
+  if(isDream){const dr=buildDreamPath(team);thirdA=dr.stages.find(s=>s.stage==='SF')?.opp||rnkLose(simSFT(101));thirdB=rnkLose(simSFT(dr.sfm===101?102:101));}
+  else if(isOdds){thirdA=loserOf(simSFTO(101));thirdB=loserOf(simSFTO(102));}
+  else{thirdA=rnkLose(simSFT(101));thirdB=rnkLose(simSFT(102));}
   const exitLabel=pvStageTxt(path.exitStage==='Winner'?'Winner':path.exitStage);
   const bestDesc=path.exitStage==='Winner'?'projected tournament winner':path.exitStage==='Final'?'projected finalist':`projected to exit at the ${exitLabel}`;
   const summaryBg=isDream||path.exitStage==='Final'||path.exitStage==='Winner'?`${c.bg}18`:'#1a1200';
   const summaryBorder=isDream||path.exitStage==='Final'||path.exitStage==='Winner'?`${c.bg}50`:'#c9a71050';
-  const summaryTxt=isDream?`Dream run — showing every opponent ${team} would face on the way to the final`:`${team} (#${rnk(team)}) are ${bestDesc} based on current ${oddsMode?'betting odds':'FIFA rankings'}`;
+  const summaryTxt=isDream
+    ?`Dream run — showing every opponent ${team} would face on the way to the final`
+    :isOdds
+      ?`${team} are ${bestDesc} based on live betting odds from EU/UK bookmakers`
+      :`${team} (#${rnk(team)}) are ${bestDesc} based on current FIFA world rankings`;
   let html=`<div class="summary-bar" style="background:${summaryBg};border-color:${summaryBorder}"><span style="color:var(--text)">${summaryTxt}</span></div>`;
-  const leftCol=isDream?pvBuildLeftDream(team):pvBuildLeft(team,path);
-  const rightCol=pvBuildRight(rightFinalist);
+  const leftCol=isDream?pvBuildLeftDream(team):isOdds?pvBuildLeftOdds(team,path):pvBuildLeft(team,path);
+  const rightFinalistO=isOdds?winOf(simSFTO(otherSFMatch||102)):rightFinalist;
+  const rightCol=pvBuildRight(isOdds?rightFinalistO:rightFinalist);
   html+=`<div class="dual"><div>${leftCol}</div><div>${rightCol}</div></div>`;
   html+=`<div class="divider"><div class="divider-line"></div><div class="divider-txt">3rd place match · Miami · July 18, 2026</div><div class="divider-line"></div></div>`;
   const predicted3rd=thirdA&&thirdB?winOf([thirdA,thirdB]):null;
   html+=pvFwPanel('3rd place · Hard Rock Stadium, Miami','July 18, 2026 · Hard Rock Stadium, Miami',thirdA,thirdB,isDream?'SF runner-up (dream)':'SF runner-up','SF runner-up',null,null,predicted3rd,'🥉');
   const dr2=isDream?buildDreamPath(team):null;
-  const dispLeft=isDream?team:leftFinalist;const dispRight=isDream?(dr2?.finalOpp||rightFinalist):rightFinalist;
+  const dispLeft=isDream?team:isOdds?winOf(simSFTO(teamSFMatch||101)):leftFinalist;
+  const dispRight=isDream?(dr2?.finalOpp||rightFinalist):isOdds?winOf(simSFTO(otherSFMatch||102)):rightFinalist;
   const lfc=tc(dispLeft);
   html+=`<div class="divider" style="margin-top:1rem"><div class="divider-line"></div><div class="divider-txt">The final · MetLife Stadium · July 19, 2026</div><div class="divider-line"></div></div>`;
   const predictedFinal=dispLeft&&dispRight?winOf([dispLeft,dispRight]):null;
-  html+=pvFwPanel('The final · MetLife Stadium, East Rutherford NJ','July 19, 2026 · MetLife Stadium, New Jersey',dispLeft,dispRight,isDream&&team!==leftFinalist?'dream finalist':null,null,`${lfc.bg}15`,isDream&&team!==leftFinalist?`Realistic projected final: ${leftFinalist} vs ${rightFinalist} · Based on ${oddsMode?'betting odds':'FIFA rankings'}`:`Based on ${oddsMode?'live betting odds (EU+UK)':'FIFA world rankings · January 2026'}`,predictedFinal);
+  html+=pvFwPanel('The final · MetLife Stadium, East Rutherford NJ','July 19, 2026 · MetLife Stadium, New Jersey',dispLeft,dispRight,isDream&&team!==leftFinalist?'dream finalist':null,null,`${lfc.bg}15`,isDream&&team!==leftFinalist?`Realistic projected final: ${leftFinalist} vs ${rightFinalist} · Based on FIFA rankings`
+    :isOdds?`Based on live betting odds (EU+UK bookmakers)`
+    :`Based on FIFA world rankings · April 2026`,predictedFinal);
   main.innerHTML=html;
 }
 
