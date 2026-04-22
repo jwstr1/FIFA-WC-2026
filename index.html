@@ -188,9 +188,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
   <div class="relay-info" id="relayInfo">
     <span class="relay-dot" id="relayDot" style="background:#555"></span>
-    <span id="relayMsg">Local relay: checking… <span class="spinner"></span></span>
-    &nbsp;·&nbsp;
-    <span style="opacity:.7">Pi-hole users: run <code>node odds_relay.js</code> or whitelist <code>corsproxy.io</code></span>
+    <span id="relayMsg">Checking Cloudflare Worker… <span class="spinner"></span></span>
   </div>
   <div class="status-box" id="statusBox"></div>
   <span class="debug-toggle" onclick="toggleDebug()">▶ Show API debug log</span>
@@ -359,20 +357,16 @@ function seedFIFA(){
   document.getElementById('btnOdds').classList.remove('active');
   document.getElementById('oddsSourceBadge').style.display='none';
   setStatus('','');
-  // Reset odds path mode if odds are cleared
   if(pvMode==='odds'){pvMode='realistic';document.getElementById('pvBtnR').className='tbtn on';document.getElementById('pvBtnO').className='tbtn';}
   if(pvSelTeam)pvDoRender(pvSelTeam);
 }
 
-const LOCAL_RELAY='http://localhost:3456';
-// Cloudflare Worker relay — primary strategy, works from any domain
+// Cloudflare Worker relay — fetches odds server-side, no CORS issues
 const CF_WORKER='https://odds-relay.jwstringer.workers.dev';
 
 const FETCH_STRATEGIES=[
   async key=>{log('Strategy 1: Cloudflare Worker');const r=await fetch(`${CF_WORKER}?apiKey=${encodeURIComponent(key)}`,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error('Worker HTTP '+r.status);const data=await r.json();if(!Array.isArray(data))throw new Error((data.message||data.error||JSON.stringify(data)).slice(0,200));return{data,source:'Cloudflare Worker',remaining:r.headers.get('x-requests-remaining'),regions:r.headers.get('x-relay-regions')||'eu,uk'};},
-  async key=>{log('Strategy 2: Local relay');const r=await fetch(`${LOCAL_RELAY}/odds?apiKey=${encodeURIComponent(key)}`,{signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error('Relay HTTP '+r.status);const data=await r.json();if(!Array.isArray(data))throw new Error((data.message||data.error||JSON.stringify(data)).slice(0,200));return{data,source:'local relay',remaining:r.headers.get('x-requests-remaining'),regions:r.headers.get('x-relay-regions')||'eu,uk'};},
-  async key=>{log('Strategy 3: corsproxy.io');const t=`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${key}&regions=eu&markets=outrights&oddsFormat=decimal`;const r=await fetch(`https://corsproxy.io/?url=${encodeURIComponent(t)}`,{signal:AbortSignal.timeout(12000)});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();if(!Array.isArray(data))throw new Error((data.message||JSON.stringify(data)).slice(0,200));return{data,source:'corsproxy.io',remaining:null,regions:'eu'};},
-  async key=>{log('Strategy 4: allorigins');const t=`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${key}&regions=eu&markets=outrights&oddsFormat=decimal`;const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(t)}`,{signal:AbortSignal.timeout(12000)});if(!r.ok)throw new Error('HTTP '+r.status);const txt=await r.text();let data;try{const o=JSON.parse(txt);data=o.contents?JSON.parse(o.contents):o;}catch(e){throw new Error('parse: '+e.message);}if(!Array.isArray(data))throw new Error((data.message||JSON.stringify(data)).slice(0,200));return{data,source:'allorigins.win',remaining:null,regions:'eu'};},
+  async key=>{log('Strategy 2: corsproxy.io fallback');const t=`https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${key}&regions=eu,uk&markets=outrights&oddsFormat=decimal`;const r=await fetch(`https://corsproxy.io/?url=${encodeURIComponent(t)}`,{signal:AbortSignal.timeout(12000)});if(!r.ok)throw new Error('HTTP '+r.status);const data=await r.json();if(!Array.isArray(data))throw new Error((data.message||JSON.stringify(data)).slice(0,200));return{data,source:'corsproxy.io',remaining:null,regions:'eu,uk'};},
 ];
 
 async function seedOdds(){
@@ -385,7 +379,7 @@ async function seedOdds(){
   let result=null;
   for(let i=0;i<FETCH_STRATEGIES.length;i++){setStatus('info','Trying strategy '+(i+1)+' of '+FETCH_STRATEGIES.length+'…');try{result=await FETCH_STRATEGIES[i](key);log('Strategy '+(i+1)+' OK via '+result.source);break;}catch(e){log('Strategy '+(i+1)+' failed: '+e.message);}}
   try{
-    if(!result)throw new Error('All fetch strategies failed.\n\nPi-hole fix: run node odds_relay.js\nOr: pihole -w corsproxy.io\n\nSee SETUP_INSTRUCTIONS.txt');
+    if(!result)throw new Error('Failed to fetch odds.\n\nThe Cloudflare Worker may be temporarily unavailable.\nTry again in a moment, or check your API key is valid at the-odds-api.com');
     const{data,source,remaining,regions}=result;
     log('Events: '+data.length);
     if(!data.length)throw new Error('API returned 0 events — market not posted yet. Use FIFA Ranking mode.');
@@ -412,8 +406,17 @@ async function seedOdds(){
 }
 
 async function checkRelay(){
-  try{const r=await fetch(`${LOCAL_RELAY}/health`,{signal:AbortSignal.timeout(2000)});const j=await r.json();if(j.status==='ok'){document.getElementById('relayDot').style.background='var(--green)';document.getElementById('relayMsg').innerHTML='<strong style="color:var(--green)">Local relay running</strong> — live odds will fetch via your machine';log('Relay healthy');}}
-  catch(e){document.getElementById('relayDot').style.background='var(--orange)';document.getElementById('relayMsg').innerHTML='Local relay not running · <strong>Pi-hole users:</strong> run <code>node odds_relay.js</code> first, or whitelist <code>corsproxy.io</code> in Pi-hole';log('Relay not available');}
+  try{
+    const r=await fetch(`${CF_WORKER}?apiKey=test`,{signal:AbortSignal.timeout(4000)});
+    // Any response (even 400 for missing key) means the Worker is reachable
+    document.getElementById('relayDot').style.background='var(--green)';
+    document.getElementById('relayMsg').innerHTML='<strong style="color:var(--green)">Cloudflare Worker ready</strong> — live odds available';
+    log('Cloudflare Worker reachable');
+  }catch(e){
+    document.getElementById('relayDot').style.background='var(--orange)';
+    document.getElementById('relayMsg').innerHTML='<span style="color:var(--orange)">Cloudflare Worker unreachable</span> — live odds may be unavailable';
+    log('Worker check failed: '+e.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
